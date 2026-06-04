@@ -5,7 +5,6 @@ from src.exceptions import ObjectNotFoundException, UniqueObjIsExistException
 from sqlalchemy.orm import DeclarativeBase
 from pydantic import BaseModel
 from typing import TypeVar, Type
-from src.init import elastic_manager, INDEX_ES
 
 ModelType = TypeVar("ModelType", bound=DeclarativeBase)
 SchemaType = TypeVar("SchemaType", bound=BaseModel)
@@ -36,17 +35,13 @@ class BaseRepository:
         return [self.schema.model_validate(res) for res in result.scalars().all()], total
 
     async def get_one(self, **filters) -> BaseModel:
-        ((key, value),) = filters.items()
-        result = await elastic_manager.elastic.get(index=INDEX_ES, id=value)
-        return result["_source"]
-
-        # query = select(self.model).filter_by(**filters)
-        # result = await self.session.execute(query)
-        # try:
-        #     result = result.scalar_one()
-        # except NoResultFound:
-        #     raise ObjectNotFoundException
-        # return self.schema.model_validate(result)
+        query = select(self.model).filter_by(**filters)
+        result = await self.session.execute(query)
+        try:
+            result = result.scalar_one()
+        except NoResultFound:
+            raise ObjectNotFoundException
+        return self.schema.model_validate(result)
 
     async def create_object(self, schema: BaseModel) -> BaseModel:
         query = insert(self.model).values(**schema.model_dump()).returning(self.model)
@@ -60,11 +55,6 @@ class BaseRepository:
                 raise err
 
         response = self.schema.model_validate(result)
-        await elastic_manager.elastic.index(
-            index=INDEX_ES,
-            id=str(response.rule_id),
-            document=response.model_dump()
-        )
         return response
 
     async def put_object(self, schema: BaseModel, **filters) -> BaseModel:

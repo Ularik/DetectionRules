@@ -1,4 +1,4 @@
-from src.repositories.rule_repository import RuleRepository
+from src.repositories.pg.rule_repository import RuleRepository
 
 class DbManager:
     def __init__(self, session_factory):
@@ -15,3 +15,5 @@ class DbManager:
 
     async def save(self):
         await self.session.commit()
+
+

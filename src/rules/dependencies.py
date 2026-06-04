@@ -1,9 +1,11 @@
 from fastapi import Depends
 from pydantic import BaseModel, Field
 from typing import Annotated
-
-from src.utils.utils import DbManager
+from src.repositories.elastic.rule_elastic import ElasticRulesRepository
+from src.utils.db_manager import DbManager
 from src.database import AsyncSession
+from src.init import elastic_manager
+from src.utils.elastic_manager import ElasticManager
 
 
 class Pagination(BaseModel):
@@ -20,3 +22,9 @@ async def get_db():
 
 
 DBDep = Annotated[DbManager, Depends(get_db)]
+
+def get_rule_elastic() -> ElasticManager:
+    es_repo = ElasticManager()
+    return es_repo
+
+ElasticDep = Annotated[ElasticRulesRepository, Depends(get_rule_elastic)]

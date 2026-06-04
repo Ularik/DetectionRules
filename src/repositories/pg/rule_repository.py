@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from sqlalchemy import update, select, func
 
 from src.exceptions import ObjectNotFoundException
-from src.repositories.base import BaseRepository
+from src.repositories.pg.base import BaseRepository
 from src.rules.models import DetectionRuleModel
 from src.rules.schemas import RuleOutSchema
 
