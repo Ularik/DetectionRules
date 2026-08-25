@@ -31,6 +31,8 @@ if config.config_file_name is not None:
 from src.database import DB_URL  # noqa: F402
 from src.database import Base   # noqa: F402
 from src.rules.models import DetectionRuleModel  # noqa: F401
+from src.users.models import Users   # noqa: F401
+from src.audit.models import Audit
 
 config.set_main_option("sqlalchemy.url", DB_URL)
 target_metadata = Base.metadata

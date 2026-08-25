@@ -11,7 +11,7 @@ if settings.MODE == "TEST":
 
 
 if settings.MODE == "DOCKER":
-    DB_URL = DB_URL.replace(settings.DB_HOST, settings.DB_HOST_DOCKER)
+    DB_URL = DB_URL.replace(settings.POSTGRES_HOST, settings.POSTGRES_HOST_DOCKER)
 
 engine = create_async_engine(DB_URL, echo=False, **db_params)  # по умолчанию держит 15 соединений
 engine_null_pool = create_async_engine(

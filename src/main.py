@@ -3,7 +3,10 @@ import logging
 from contextlib import asynccontextmanager
 from src.init import elastic_manager
 from src.rules.api import router as rules_router
+from src.users.api import router as users_router
+from src.audit.api import router as audit_router
 from fastapi.middleware.cors import CORSMiddleware
+from src.exceptions.exception_handler import setup_exceptions
 
 logging.basicConfig(level=logging.INFO)
 
@@ -17,10 +20,14 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(rules_router)
+app.include_router(rules_router, prefix="/api")
+app.include_router(users_router, prefix="/api")
+app.include_router(audit_router, prefix="/api")
+
+setup_exceptions(app)

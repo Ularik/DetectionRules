@@ -1,17 +1,15 @@
-from pydantic import BaseModel
-from sqlalchemy import update, select, func
-
-from src.exceptions import ObjectNotFoundException
+from sqlalchemy import select
+from src.exceptions.exceptions import  RuleNotFoundException
 from src.repositories.pg.base import BaseRepository
 from src.rules.models import DetectionRuleModel
-from src.rules.schemas import RuleOutSchema
+from src.rules.schemas import RuleInDbSchema
 
 
 class RuleRepository(BaseRepository):
     model = DetectionRuleModel
-    schema = RuleOutSchema
+    schema = RuleInDbSchema
 
-    async def get_objects(self, *filters, **filters_by) -> (list[RuleOutSchema], int):
+    async def get_objects(self, *filters, **filters_by) -> (list[RuleInDbSchema], int):
         filters = [*filters]
 
         if 'description' in filters_by and filters_by['description']:
@@ -24,13 +22,16 @@ class RuleRepository(BaseRepository):
         return await super().get_objects(*filters, **filters_by)
 
 
-    async def patch_rule(self, rule_id) -> RuleOutSchema:
-        query = select(self.model).filter_by(rule_id=rule_id)
-        result = await self.session.execute(query)
-        rule = result.scalar_one_or_none()
+    async def get_last_rule_version(self, rule_id: str) -> RuleInDbSchema:
+        query = (
+            select(self.model)
+            .filter_by(rule_id=rule_id)
+            .order_by(self.model.updated_at.desc())
+        )
+        res = await self.session.execute(query)
+        db_obj = res.scalars().first()
 
-        if rule is None:
-            raise ObjectNotFoundException
+        if db_obj is None:
+            raise RuleNotFoundException  # Или бросьте ваше кастомное исключение (e.g., HTTPException / NotFound)
 
-        rule.enabled = not rule.enabled
-        return self.schema.model_validate(rule)
+        return RuleInDbSchema.model_validate(db_obj)

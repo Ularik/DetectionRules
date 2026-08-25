@@ -1,7 +1,7 @@
-from elasticsearch import AsyncElasticsearch
-from elasticsearch import NotFoundError
+from elastic_transport import ObjectApiResponse
+from elasticsearch import AsyncElasticsearch, ConflictError, NotFoundError
 
-from src.exceptions import ObjectNotFoundException
+from src.exceptions.exceptions import ObjectNotFoundException, NoResultException, RuleAlreadyExistException
 
 
 class ElasticRepository:
@@ -10,18 +10,25 @@ class ElasticRepository:
     def __init__(self, client: AsyncElasticsearch):
         self.client = client
 
-    async def get_by_id(self, doc_id: str) -> dict | None:
+    async def get_by_id(self, doc_id: str) -> dict:
         result = await self.client.get(index=self.INDEX, id=doc_id, ignore=[404])
-        return result["_source"] if result.get("found") else None
+        if not result.get("found"):
+            raise ObjectNotFoundException
+        return result["_source"]
 
     async def search(self, query: dict) -> (list[dict], int):
+        query["sort"] = [{"created_at": {"order": "desc"}}]
         result = await self.client.search(index=self.INDEX, body=query)
         total = result["hits"]["total"]["value"]  # общее кол-во записей
         items = [hit["_source"] for hit in result["hits"]["hits"]]
         return items, total
 
-    async def create(self, doc_id: str, body: dict) -> dict:
-        return await self.client.index(index=self.INDEX, id=doc_id, body=body)
+    async def create(self, doc_id: str, body: dict) -> dict | ObjectApiResponse:
+        try:
+            await self.client.index(index=self.INDEX, id=doc_id, body=body, op_type="create")
+            return await self.get_by_id(doc_id=doc_id)
+        except ConflictError:
+            raise RuleAlreadyExistException
 
     async def update(self, doc_id: str, body: dict) -> dict:
         try:
@@ -30,8 +37,8 @@ class ElasticRepository:
         except NotFoundError:
             raise ObjectNotFoundException
 
-    async def delete(self, doc_id: str) -> dict:
+    async def delete(self, doc_id: str) -> dict | ObjectApiResponse:
         try:
-            return await self.client.delete(index=self.INDEX, id=doc_id)
+            return await self.client.delete(index=self.INDEX, id=doc_id, refresh="wait_for")
         except NotFoundError:
             raise ObjectNotFoundException

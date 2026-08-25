@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
-from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Integer, CheckConstraint, func, ARRAY
+from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Integer, CheckConstraint, func, ARRAY, ForeignKey
 from datetime import datetime
 from enum import Enum
 
@@ -15,8 +15,8 @@ class SeverityHintEnum(str, Enum):
 class DetectionRuleModel(Base):
     __tablename__ = "detection_rules"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    rule_id: Mapped[str] = mapped_column(String(50), unique=True, index=True)  # Неизменяемый ID
+    unique_id: Mapped[int] = mapped_column(primary_key=True)
+    rule_id: Mapped[str] = mapped_column(String(50))  # Неизменяемый ID
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
     rule_type: Mapped[str | None] = mapped_column(String(100))
     scope: Mapped[str | None] = mapped_column(String(50))
@@ -63,5 +63,4 @@ class DetectionRuleModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.timezone('Asia/Bishkek', func.now()))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
         server_default=func.now())
-    created_by: Mapped[str] = mapped_column(String(50))
-    updated_by: Mapped[str] = mapped_column(String(50))
+

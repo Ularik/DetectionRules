@@ -7,12 +7,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 class Settings(BaseSettings):
     MODE: Literal["TEST", "LOCAL", "PROD", "DOCKER"]
-    DB_NAME: str
-    DB_HOST: str
-    DB_HOST_DOCKER: str
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_PORT: str
+
+    POSTGRES_DB: str
+    POSTGRES_HOST: str
+    POSTGRES_HOST_DOCKER: str
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_PORT: str
 
     ES_HOST: str
     ES_USER: str
@@ -28,7 +29,7 @@ class Settings(BaseSettings):
 
     @property
     def DB_URL(self):
-        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
     model_config = SettingsConfigDict(env_file=BASE_DIR / ".env", extra="ignore")
 

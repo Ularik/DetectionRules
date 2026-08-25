@@ -4,6 +4,6 @@ from src.utils.elastic_manager import ElasticManager
 
 class BaseService:
 
-    def __init__(self, db: DbManager, es: ElasticManager):
+    def __init__(self, db: DbManager):
         self.db = db
-        self.es = es
+        self.es = ElasticManager()
