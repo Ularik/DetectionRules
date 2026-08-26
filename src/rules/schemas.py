@@ -1,7 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from src.rules.models import SeverityHintEnum
 from datetime import datetime
-from src.users.schemas import UserOutSchema
 
 
 class RuleBaseSchema(BaseModel):

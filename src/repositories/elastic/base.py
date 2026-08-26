@@ -25,7 +25,7 @@ class ElasticRepository:
 
     async def create(self, doc_id: str, body: dict) -> dict | ObjectApiResponse:
         try:
-            await self.client.index(index=self.INDEX, id=doc_id, body=body, op_type="create")
+            await self.client.create(index=self.INDEX, id=doc_id, document=body)
             return await self.get_by_id(doc_id=doc_id)
         except ConflictError:
             raise RuleAlreadyExistException

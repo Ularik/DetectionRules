@@ -25,3 +25,11 @@ async def update_rule(
         ):
     new_rule = await RuleService(db).update_rule(user=user, rule_id=rule_id, data=data)
     return new_rule
+
+@router.delete("/{rule_id}")
+async def delete_rule(
+        db: DBDep,
+        rule_id: str
+):
+    res = await RuleService(db).delete(rule_id=rule_id)
+    return res

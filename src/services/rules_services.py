@@ -35,7 +35,7 @@ class RuleService(BaseService):
         _audit_data = AuditAddSchema(author_id=user.user_id, rule_unique_id=rule_data_with_unique_id.unique_id, rule_general_id=data.rule_id)
         await self.db.auditModel.create_object(_audit_data)
 
-        _rule_elastic_data = RuleESOutSchema.model_validate(
+        _rule_elastic_data = RuleESSchema.model_validate(
             {**rule_data_with_unique_id.model_dump(),   # меняем id авторов на имена
              "created_by": user.username,
              "updated_by": user.username
