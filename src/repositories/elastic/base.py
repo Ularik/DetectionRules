@@ -25,7 +25,7 @@ class ElasticRepository:
 
     async def create(self, doc_id: str, body: dict) -> dict | ObjectApiResponse:
         try:
-            await self.client.create(index=self.INDEX, id=doc_id, document=body)
+            await self.client.create(index=self.INDEX, id=doc_id, document=body, refresh="wait_for")
             return await self.get_by_id(doc_id=doc_id)
         except ConflictError:
             raise RuleAlreadyExistException
@@ -39,6 +39,7 @@ class ElasticRepository:
 
     async def delete(self, doc_id: str) -> dict | ObjectApiResponse:
         try:
+            print(doc_id)
             return await self.client.delete(index=self.INDEX, id=doc_id, refresh="wait_for")
         except NotFoundError:
             raise ObjectNotFoundException

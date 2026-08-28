@@ -40,7 +40,7 @@ async def get_me(db: DBDep, id: int):
     user = await UserService(db).get_user(id=id)
     return user
 
-@router.post("/logout")
+@router.delete("/logout")
 async def logout(response: Response):
     response.delete_cookie("access_token")
     return {"success": "Вы вышли из аккаунта"}

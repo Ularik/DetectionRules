@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from src.dependencies import DBDep, AuthUserDep
 from src.exceptions.exceptions import RuleAlreadyExistException
-from src.rules.schemas import RuleRequestCreateSchema, RuleUpdateSchema
+from src.rules.schemas import RuleRequestCreateUpdateSchema
 from src.services.rules_services import RuleService
 
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/analyst", tags=["Правила аналитика"]
 @router.post("/")
 async def create_rule(
         db: DBDep,
-        data: RuleRequestCreateSchema,
+        data: RuleRequestCreateUpdateSchema,
         user: AuthUserDep
         ):
     new_rule = await RuleService(db).create_rule(user=user, data=data)
@@ -21,8 +21,7 @@ async def create_rule(
 async def update_rule(
         db: DBDep,
         rule_id: str,
-        data: RuleUpdateSchema,
+        data: RuleRequestCreateUpdateSchema,
         user: AuthUserDep
         ):
-    new_rule = await RuleService(db).update_rule(user=user, rule_id=rule_id, data=data)
-    return new_rule
+    pass

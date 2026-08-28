@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-
 from src.rules.schemas import RuleDBSchema
 from src.users.schemas import UserOutSchema
 
@@ -26,6 +25,10 @@ class AuditOutSchema(AuditAddSchema):
 class AuditOutWithAuthorSchema(AuditOutSchema):
     author: UserOutSchema
 
+
+class ApiAuditWithAuthorSchema(BaseModel):
+    total: int
+    items: list[AuditOutWithAuthorSchema]
 
 class AuditOutFullSchema(AuditOutWithAuthorSchema):
     rule: RuleDBSchema

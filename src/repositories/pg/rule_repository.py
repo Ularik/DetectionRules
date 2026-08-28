@@ -21,17 +21,16 @@ class RuleRepository(BaseRepository):
 
         return await super().get_objects(*filters, **filters_by)
 
-
-    async def get_last_rule_version(self, rule_id: str) -> RuleInDbSchema:
+    async def get_current_rule_rule_id(self, unique_id: int) -> str:
         query = (
-            select(self.model)
-            .filter_by(rule_id=rule_id)
-            .order_by(self.model.updated_at.desc())
+            select(self.model.rule_id)
+            .select_from(self.model)
+            .filter_by(unique_id=unique_id)
         )
         res = await self.session.execute(query)
-        db_obj = res.scalars().first()
+        rule_id = res.scalar()
 
-        if db_obj is None:
+        if rule_id is None:
             raise RuleNotFoundException  # Или бросьте ваше кастомное исключение (e.g., HTTPException / NotFound)
 
-        return RuleInDbSchema.model_validate(db_obj)
+        return rule_id

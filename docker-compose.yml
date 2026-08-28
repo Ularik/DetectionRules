@@ -12,7 +12,7 @@ services:
 
 
   backend:
-    image: ularchik/detectionrules_back
+    image: ularchik/detection_rules_back
     container_name: backend
     restart: always
     command: sh -c "alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8000"
@@ -25,7 +25,7 @@ services:
         condition: service_started
 
   frontend:
-    image: ularchik/detection_rules:latest
+    image: ularchik/detection_rules_front:latest
     container_name: front
     restart: always
     expose:

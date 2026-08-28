@@ -1,5 +1,5 @@
 from src.repositories.elastic.base import ElasticRepository
-from src.rules.schemas import RuleApiResponseSchema, RuleESSchema, RuleUpdateElasticSchema
+from src.rules.schemas import RuleApiResponseSchema, RuleESSchema
 
 
 class ElasticRulesRepository(ElasticRepository):
@@ -34,13 +34,9 @@ class ElasticRulesRepository(ElasticRepository):
         return result
 
     async def create_rule(self, data: RuleESSchema) -> RuleESSchema:
-        res = await super().create(data.rule_id, data.model_dump())
+        res = await super().create(doc_id=data.rule_id, body=data.model_dump())
         return RuleESSchema.model_validate(res)
 
     async def get_one_rule(self, doc_id: str) -> RuleESSchema:
         res = await super().get_by_id(doc_id=doc_id)
-        return RuleESSchema.model_validate(res)
-
-    async def update_rule(self, rule_id: str, data: RuleUpdateElasticSchema, exclude_unset: bool = True) -> RuleESSchema:
-        res = await super().update(doc_id=rule_id, body=data.model_dump(exclude_unset=exclude_unset))
         return RuleESSchema.model_validate(res)

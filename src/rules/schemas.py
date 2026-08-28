@@ -27,39 +27,27 @@ class RuleBaseSchema(BaseModel):
 
 
 # 2. Схема создания (добавляем rule_id)
-class RuleRequestCreateSchema(RuleBaseSchema):
+class RuleRequestCreateUpdateSchema(RuleBaseSchema):
     rule_id: str
 
 
-# 3. Схема обновления (без rule_id, но с служебными полями)
-class RuleUpdateSchema(RuleBaseSchema):
-    created_by: str
-    updated_by: str
-
-
-class RuleInDbSchema(RuleRequestCreateSchema):
+class RuleInDbSchema(RuleRequestCreateUpdateSchema):
     created_at: datetime
     updated_at: datetime
     unique_id: int
 
 
-class RuleESSchema(RuleRequestCreateSchema):
+class RuleESSchema(RuleRequestCreateUpdateSchema):   # в базе elastic храним прямо в поля created_by, upda...
     created_by: str
     updated_by: str
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
+    created_at: datetime | None
+    updated_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
-class RuleDBSchema(RuleRequestCreateSchema):
+class RuleDBSchema(RuleRequestCreateUpdateSchema):
     created_at: datetime | None = None
-    updated_at: datetime | None = None
-
-    model_config = ConfigDict(from_attributes=True, extra='ignore')
-
-class RuleUpdateElasticSchema(RuleRequestCreateSchema):
-    updated_by: str | None = None
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True, extra='ignore')
