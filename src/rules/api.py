@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends
 from src.rules.models import SeverityHintEnum
+from src.rules.schemas import TestRuleSchema
 from src.services.rules_services import RuleService
+from src.services.test_rules_service import TestRuleService
 from src.dependencies import DBDep, PaginationDep, get_admin_user, get_analyst_user
 from src.rules.admin.api import router as admin_router
 from src.rules.analyst.api import router as analyst_router
@@ -44,3 +46,11 @@ async def get_one_rule(
 async def get_severity_hints():
     return [e.value for e in SeverityHintEnum]
 
+
+@router.post("/test-rule", tags=["Проверка правил"])
+async def test_rule(
+        db: DBDep,
+        test_data: TestRuleSchema
+):
+    res = await TestRuleService(db).test_rules(test_data)
+    return res

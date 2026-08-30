@@ -18,13 +18,13 @@ class RuleService(BaseService):
         text = pattern or description
 
         if rule_id:
-            return await self.es.rulesRepository.get_by_id(doc_id=rule_id)
+            return await self.es.rulesRepository.get_one_rule(doc_id=rule_id)
         return await self.es.rulesRepository.search_rules(text=text, limit=limit, offset=offset)
 
 
     async def find_one(self, rule_id: str) -> dict:
         try:
-            return await self.es.rulesRepository.get_by_id(doc_id=rule_id)
+            return await self.es.rulesRepository.get_one_rule(doc_id=rule_id)
         except ObjectNotFoundException as err:
             raise RuleNotFoundException from err
 
@@ -61,6 +61,8 @@ class RuleService(BaseService):
         new_audit_data = AuditAddSchema(
             rule_unique_id=new_rule_version.unique_id,
             author_id=user.user_id,
+            action="updated",
+            resource_type=rule_id,
             rule_general_id=data.rule_id,
             before_id=old_audit.id if old_audit else old_audit
         )

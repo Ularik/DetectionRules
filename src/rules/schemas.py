@@ -1,9 +1,12 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 from src.rules.models import SeverityHintEnum
 from datetime import datetime
 
 
-class RuleBaseSchema(BaseModel):
+class RuleRequestCreateUpdateSchema(BaseModel):
+    rule_id: str
     enabled: bool
     rule_type: str | None = None
     scope: str | None = None
@@ -24,11 +27,6 @@ class RuleBaseSchema(BaseModel):
     tags: list[str]
 
     model_config = ConfigDict(from_attributes=True, extra="ignore")
-
-
-# 2. Схема создания (добавляем rule_id)
-class RuleRequestCreateUpdateSchema(RuleBaseSchema):
-    rule_id: str
 
 
 class RuleInDbSchema(RuleRequestCreateUpdateSchema):
@@ -57,3 +55,11 @@ class RuleApiResponseSchema(BaseModel):
   total: int
   has_next: bool
   items: list[RuleESSchema]
+
+
+class TestRuleSchema(BaseModel):
+    request_uri: str
+    payload: str
+    signature: str
+    source_type: Literal["waf", "ips"]
+    scope: str
