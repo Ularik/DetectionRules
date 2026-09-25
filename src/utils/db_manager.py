@@ -1,6 +1,8 @@
 from src.repositories.pg.rule_repository import RuleRepository
 from src.repositories.pg.users import UsersRepository
 from src.repositories.pg.audit_repository import AuditRepository
+from src.repositories.pg.correlation_rule_repository import CorrelationRuleRepository
+from src.repositories.pg.correlation_audit import CorrelationAuditRepository
 
 
 class DbManager:
@@ -12,6 +14,8 @@ class DbManager:
         self.ruleModel = RuleRepository(self.session)
         self.usersModel = UsersRepository(self.session)
         self.auditModel = AuditRepository(self.session)
+        self.correlationModel = CorrelationRuleRepository(self.session)
+        self.correlationAuditModel = CorrelationAuditRepository(self.session)
         return self
 
     async def __aexit__(self, *args):

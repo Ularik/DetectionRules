@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     ES_PASSWORD: str
     ES_VERIFY_CERTS: bool = False
 
+    BACKEND_API_URL: str
+
     REDIS_HOST: str
     REDIS_PORT: str
 

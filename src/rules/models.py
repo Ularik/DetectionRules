@@ -11,6 +11,12 @@ class SeverityHintEnum(str, Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
+severity_hint_enum_type = SAEnum(
+    SeverityHintEnum,
+    name="severity_hint_enum",
+    values_callable=lambda enum_type: [member.value for member in enum_type],
+    validate_strings=True,
+)
 
 class DetectionRuleModel(Base):
     __tablename__ = "detection_rules"
@@ -41,7 +47,7 @@ class DetectionRuleModel(Base):
         default=list
     )     # Initial Access
     severity_hint: Mapped[SeverityHintEnum] = mapped_column(
-        SAEnum(SeverityHintEnum, name="severity_hint_enum"),
+        severity_hint_enum_type,
         nullable=False
     )
     confidence: Mapped[int | None] = mapped_column(

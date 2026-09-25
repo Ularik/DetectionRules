@@ -32,7 +32,7 @@ class ElasticRepository:
 
     async def update(self, doc_id: str, body: dict) -> dict:
         try:
-            await self.client.update(index=self.INDEX, id=doc_id, body={"doc": body})
+            await self.client.update(index=self.INDEX, id=doc_id, body={"doc": body}, refresh="wait_for")
             return await self.get_by_id(doc_id)
         except NotFoundError:
             raise ObjectNotFoundException

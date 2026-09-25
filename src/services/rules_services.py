@@ -1,7 +1,7 @@
 from src.exceptions.exceptions import ObjectNotFoundException, RuleNotFoundException, AuditNotFoundException
 from src.services.base import BaseService
 from src.rules.schemas import RuleRequestCreateUpdateSchema, RuleInDbSchema, \
-    RuleESSchema
+    RuleESSchema, RuleSetStatusSchema, RuleSetStatusApiResponseSchema, TestRuleSchema, TestRuleResponseSchema
 from src.audit.schemas import AuditAddSchema, AuditOutSchema, AuditOutWithAuthorSchema
 
 from src.users.schemas import UserInCookiesSchema
@@ -45,6 +45,12 @@ class RuleService(BaseService):
         await self.db.save()
         return res
 
+
+    async def set_status(self, rule_id: str, data: RuleSetStatusSchema) -> RuleESSchema:
+        response = await self.main_backend.patch(f"/detection-rules/{rule_id}/status", data=data)
+        return RuleSetStatusApiResponseSchema.model_validate(response).rule
+
+
     async def update_rule(self, user: UserInCookiesSchema, rule_id: str, data: RuleRequestCreateUpdateSchema):
 
         # создаем новый объект в БД с новым unique_id
@@ -77,14 +83,17 @@ class RuleService(BaseService):
 
         _rule_elastic_data = RuleESSchema.model_validate(
             {**new_rule_version.model_dump(),  # меняем id авторов на имена
-             "updated_by": user.username,
-             "created_by": "admin"
+             "updated_by": user.username
              }
         )
-        await self.es.rulesRepository.delete(doc_id=rule_id)  # удаляем стар
-        res: RuleESSchema = await self.es.rulesRepository.create_rule(data=_rule_elastic_data)
+        res: RuleESSchema = await self.es.rulesRepository.update(doc_id=rule_id, data=_rule_elastic_data)
 
         return res
+
+
+    async def test_rule(self, data: TestRuleSchema) -> TestRuleResponseSchema:
+        result = await self.main_backend.post("/detection-rules/test", data=data)
+        return TestRuleResponseSchema.model_validate(result)
 
 
     async def delete(self, rule_id: str):

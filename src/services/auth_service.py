@@ -1,3 +1,4 @@
+import os
 from fastapi import HTTPException
 from datetime import timezone, datetime, timedelta
 import bcrypt
@@ -6,6 +7,7 @@ from src.config import settings
 from concurrent.futures import ThreadPoolExecutor
 from src.users.schemas import UserInCookiesSchema
 import asyncio
+import time
 
 
 class AuthService:
@@ -49,3 +51,6 @@ class AuthService:
             raise HTTPException(status_code=401, detail="Сессия истекла, войдите снова")
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Некорректный токен доступа")
+
+
+

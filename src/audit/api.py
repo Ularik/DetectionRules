@@ -30,3 +30,4 @@ async def get_audit_detail(
 ):
     res = await AuditService(db).get_detail_audit(audit_id=id)
     return res
+

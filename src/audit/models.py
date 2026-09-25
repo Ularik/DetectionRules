@@ -37,3 +37,41 @@ class Audit(Base):
         server_default=func.timezone('Asia/Bishkek', func.now()),
         onupdate=func.timezone('Asia/Bishkek', func.now())
     )
+
+
+
+class CorrelationAudit(Base):
+    __tablename__ = "correlation_audit"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    author_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    action: Mapped[str] = mapped_column(String(50), default="create")
+    resource_type: Mapped[str | None] = mapped_column(String(70))
+    correlation_id: Mapped[str]
+    correlation_unique_id: Mapped[str] = mapped_column(ForeignKey("correlation_rules.id", ondelete="CASCADE"))
+    before_id: Mapped[int | None] = mapped_column(ForeignKey("correlation_audit.id", ondelete="SET NULL"))
+    after_id: Mapped[int | None] = mapped_column(ForeignKey("correlation_audit.id", ondelete="SET NULL"))
+
+    author: Mapped["Users"] = relationship("Users")
+    rule: Mapped["CorrelationRuleModel"] = relationship("CorrelationRuleModel")
+
+    before: Mapped["CorrelationAudit | None"] = relationship(
+        "CorrelationAudit",
+        foreign_keys=[before_id],
+        remote_side=[id]
+    )
+    after: Mapped["CorrelationAudit | None"] = relationship(
+        "CorrelationAudit",
+        foreign_keys=[after_id],
+        remote_side=[id]
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
+                                                 server_default=func.timezone('Asia/Bishkek', func.now()))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.timezone('Asia/Bishkek', func.now()),
+        onupdate=func.timezone('Asia/Bishkek', func.now())
+    )
+
+

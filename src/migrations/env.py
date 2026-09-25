@@ -32,7 +32,9 @@ from src.database import DB_URL  # noqa: F402
 from src.database import Base   # noqa: F402
 from src.rules.models import DetectionRuleModel  # noqa: F401
 from src.users.models import Users   # noqa: F401
-from src.audit.models import Audit
+from src.correlation_rules.models import CorrelationRuleModel
+from src.audit.models import Audit, CorrelationAudit
+
 
 config.set_main_option("sqlalchemy.url", DB_URL)
 target_metadata = Base.metadata
