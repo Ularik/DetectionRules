@@ -17,3 +17,11 @@ async def get_scenarios(
 ):
     res = await ScenariosService(db).get_scenarios(query_params=params)
     return res
+
+
+@router.get("/{id}")
+async def get_scenario_detail(
+    db: DBDep,
+    id: str
+):
+    return await ScenariosService(db).get_detail_scenario(scenario_id=id)

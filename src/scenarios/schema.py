@@ -1,8 +1,11 @@
 from datetime import datetime
 from src.incidents.schemas import AnalystStatus
 from enum import Enum
-from typing import Optional, Literal
-from pydantic import BaseModel, Field, IPvAnyAddress
+from typing import Optional, Literal, Any
+from pydantic import BaseModel, Field, IPvAnyAddress, ConfigDict
+from src.ioc.schemas import IocItemSchema
+from src.mitre.schemas import MitreSchema
+from src.incidents.schemas import IncidentLiteSchema
 
 
 class SeverityEnum(str, Enum):
@@ -104,3 +107,100 @@ class ScenarioApiResponse(BaseModel):
     total: int = Field(ge=0)
     page: int = Field(ge=1)
     size: int = Field(ge=1)
+
+
+class ScenarioDetailSchema(BaseModel):
+    scenario_id: str
+    scenario_key: Optional[str] = None
+    scenario_type: Optional[str] = None
+    status: str
+    engine_status: str
+    analyst_status: str
+
+    # Временные метки
+    first_seen: Optional[datetime] = None
+    last_seen: Optional[datetime] = None
+
+    # Сетевые и субъектные атрибуты
+    source_ip: Optional[str] = None
+    source_ips: list[str] = Field(default_factory=[])
+    source_user: Optional[str] = None
+    source_users: list[str] = Field(default_factory=[])
+    source_hosts: list[str] = Field(default_factory=[])
+    observer_host: Optional[str] = None
+    destination_ip: Optional[str] = None
+    destination_ips: list[str] = Field(default_factory=[])
+    destination_host: Optional[str] = None
+    destination_hosts: list[str] = Field(default_factory=[])
+
+    # Данные об активе (Asset)
+    asset_id: Optional[str] = None
+    asset_hostname: Optional[str] = None
+    asset_type: Optional[str] = None
+    asset_criticality: Optional[str] = None
+    asset_tags: list[str] = Field(default_factory=[])
+
+    # Запросы и полезная нагрузка
+    request_uris: list[str] = Field(default_factory=[])
+    payloads: list[str] = Field(default_factory=[])
+    signatures: list[str] = Field(default_factory=[])
+
+    # Хэши файлов
+    file_hashes: list[str] = Field(default_factory=[])
+    md5_hashes: list[str] = Field(default_factory=[])
+    sha1_hashes: list[str] = Field(default_factory=[])
+    sha256_hashes: list[str] = Field(default_factory=[])
+
+    # Детекты и правила
+    detection_rule_ids: list[str] = Field(default_factory=[])
+    detection_categories: list[str] = Field(default_factory=[])
+    detection_rule_descriptions: list[str] = Field(default_factory=[])
+    recommendations: list[str] = Field(default_factory=[])
+
+    # Индикаторы компрометации (IoC)
+    ioc_matches: list[IocItemSchema] = Field(default_factory=[])
+    ioc_match_count: int
+    ioc_severity: Optional[str] = None
+    ioc_confidence: Optional[int] = None
+
+    # Блеклисты
+    blacklisted: bool
+    blacklist_sources: list[str] = Field(default_factory=[])
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )
+
+
+class LinksSchema(BaseModel):
+    raw_events: Optional[str] = Field(default=None, description="Ссылка на сырые события")
+    incidents: list[str] = Field(default_factory=[], description="Ссылки на инциденты")
+
+
+class ScenarioAggregateSchema(BaseModel):
+    # Поле scenario использует ранее созданную ScenarioDetailSchema
+    # (или Dict[str, Any], если точно разметка не фиксирована)
+    scenario: ScenarioDetailSchema = Field(description="Детальная информация о сценарии")
+
+    incident_count: int = Field(description="Количество инцидентов")
+    related_incidents: list[IncidentLiteSchema] = Field(
+        default_factory=[],
+        description="Связанные инциденты"
+    )
+    related_incident_count: int = Field(description="Количество связанных инцидентов")
+    raw_event_count: int = Field(description="Количество сырых событий")
+
+    ioc_match_count: int = Field(description="Количество совпадений IoC")
+    ioc_matches: list[Any] = Field(default_factory=[], description="Совпадения IoC")
+
+    # Пустышка для структуры MITRE (принимает любой словарь/объект)
+    mitre: MitreSchema = Field(default_factory={}, description="Данные MITRE ATT&CK")
+
+    # Вложенный объект ссылок (поддержка "links.raw_events" и "links.incidents")
+    links: Optional[LinksSchema] = Field(default=None, description="Ссылки на связанную информацию")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
+    )

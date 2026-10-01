@@ -13,6 +13,7 @@ from src.incidents.api import router as inc_router
 from src.scenarios.api import router as scenario_router
 from src.organizations.api import router as org_router
 from src.attack_types.api import router as attack_router
+from src.events.api import router as event_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.exceptions.exception_handler import setup_exceptions
 
@@ -49,5 +50,6 @@ app.include_router(inc_router, prefix="/api")
 app.include_router(scenario_router, prefix="/api")
 app.include_router(org_router, prefix="/api")
 app.include_router(attack_router, prefix="/api")
+app.include_router(event_router, prefix="/api")
 
 setup_exceptions(app)

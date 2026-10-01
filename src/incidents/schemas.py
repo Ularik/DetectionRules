@@ -1,126 +1,32 @@
 from typing import Literal, Optional, Any
 from datetime import datetime
 from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
-
-class WazuhAgentSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    ip: str | None = None
-    id: str | None = None
-    name: str | None = None
-    version: str | None = None
-    ephemeral_id: str | None = None
-    type: str | None = None
+from src.events.schema import WazuhEventSchema
 
 
-class WazuhDecoderSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
+class IncidentLiteSchema(BaseModel):
+    incident_id: str = Field(description="ID Incident")
+    start_time: datetime = Field(description="Начало")
+    end_time: datetime = Field(description="Окончание")
+    severity: str = Field(description="Критичность")
+    risk_score: int = Field(description="Risk score")
+    priority: int = Field(description="Приоритет")
+    attack_type: str = Field(description="Тип активности")
+    source_ip: Optional[str] = Field(default=None, description="Source IP")
+    source_user: Optional[str] = Field(default=None, description="Source user")
+    observer_host: Optional[str] = Field(default=None, description="Observer host")
+    destination_ip: Optional[str] = Field(default=None, description="Destination IP")
+    destination_host: Optional[str] = Field(default=None, description="Destination host")
+    decision: str = Field(description="Decision")
+    action: str = Field(description="Action")
+    organization_id: str | None = Field(default=None, description="Организация")
+    event_count: int = Field(description="Количество событий")
 
-    name: str | None = None
-
-
-class WazuhEcsSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    version: str | None = None
-
-
-class WazuhOsSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    codename: str | None = None
-    type: str | None = None
-    platform: str | None = None
-    version: str | None = None
-    family: str | None = None
-    name: str | None = None
-    kernel: str | None = None
-
-
-class WazuhHostSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    os: WazuhOsSchema | None = None
-    id: str | None = None
-    containerized: bool | None = None
-    name: str | None = None
-    ip: list[str] = Field(default_factory=[])
-    mac: list[str] = Field(default_factory=[])
-    hostname: str | None = None
-    architecture: str | None = None
-
-
-class WazuhLogFileSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    path: str | None = None
-    device_id: str | None = None
-    inode: int | None = None
-
-
-class WazuhLogSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    offset: int | None = None
-    file: WazuhLogFileSchema | None = None
-
-
-class WazuhManagerSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    name: str | None = None
-
-
-class WazuhPredecoderSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    program_name: str | None = None
-    timestamp: str | None = None
-    hostname: str | None = None
-
-
-class WazuhInputSchema(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    type: str | None = None
-
-
-class WazuhEventSchema(BaseModel):
-    """
-    Одно событие из Wazuh / Elasticsearch.
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    timestamp: datetime | None = None
-    at_timestamp: datetime | None = Field(
-        default=None,
-        alias="@timestamp",
-    )
-
-    agent: WazuhAgentSchema | None = None
-    decoder: WazuhDecoderSchema | None = None
-    ecs: WazuhEcsSchema | None = None
-    host: WazuhHostSchema | None = None
-    log: WazuhLogSchema | None = None
-    location: str | None = None
-    manager: WazuhManagerSchema | None = None
-    full_log: str | None = None
-    id: str | None = None
-    predecoder: WazuhPredecoderSchema | None = None
-    input: WazuhInputSchema | None = None
-
-    elastic_index: str | None = Field(
-        default=None,
-        alias="_elastic_index",
-    )
-
-    elastic_id: str | None = Field(
-        default=None,
-        alias="_elastic_id",
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True
     )
 
 
@@ -145,7 +51,7 @@ class IncidentEventResponseSchema(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     incident_id: str
-    organization_id: str
+    organization_id: str | None = None
     attack_type: str
     observer_host: str
 
