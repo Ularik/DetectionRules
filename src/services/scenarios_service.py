@@ -1,4 +1,5 @@
-from src.scenarios.schema import ScenarioQueryParams, ScenarioApiResponse, ScenarioAggregateSchema
+from src.scenarios.schema import ScenarioQueryParams, ScenarioApiResponse, ScenarioAggregateSchema, \
+    ScenariosEventsApiResponseSchema, ScenarioEventsParams
 from src.services.base import BaseService
 
 
@@ -11,3 +12,8 @@ class ScenariosService(BaseService):
     async def get_detail_scenario(self, scenario_id: str):
         res = await self.main_backend.get(f"/hunting/scenarios/{scenario_id}")
         return ScenarioAggregateSchema.model_validate(res)
+
+
+    async def get_scenario_events(self, scenario_id: str, params: ScenarioEventsParams):
+        res = await self.main_backend.get(f"/hunting/scenarios/{scenario_id}/events", params=params.model_dump())
+        return ScenariosEventsApiResponseSchema.model_validate(res)

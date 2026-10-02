@@ -6,6 +6,20 @@ from pydantic import BaseModel, Field, IPvAnyAddress, ConfigDict
 from src.ioc.schemas import IocItemSchema
 from src.mitre.schemas import MitreSchema
 from src.incidents.schemas import IncidentLiteSchema
+from src.events.schema import WazuhEventSchema
+
+
+class ScenariosEventsApiResponseSchema(BaseModel):
+    organization_id: str
+    scenario_type: str
+    incident_ids: list[str]
+    items: list[WazuhEventSchema]
+    total: int
+    page: int
+    size: int
+    returned: int
+    missing: list[str]
+    missing_count: int
 
 
 class SeverityEnum(str, Enum):
@@ -13,6 +27,11 @@ class SeverityEnum(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
+
+
+class ScenarioEventsParams(BaseModel):
+    page: int = Field(default=1)
+    size: int = Field(default=10)
 
 
 class ScenarioQueryParams(BaseModel):

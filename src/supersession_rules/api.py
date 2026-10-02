@@ -4,7 +4,7 @@ from src.services.supersession_rules import SuperSessionService
 from src.supersession_rules.schemas import SuppressionRuleUpdateSchema, SuppressionRequestPostSchema
 
 
-router = APIRouter(prefix="/supersession-rules")
+router = APIRouter(prefix="/supersession-rules", tags=["Супер Правила"])
 
 
 @router.get("/")

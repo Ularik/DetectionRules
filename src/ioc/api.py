@@ -5,7 +5,7 @@ from src.services.ioc_service import IocService
 from src.ioc.dependencies import IocQueryDep
 
 
-router = APIRouter(prefix="/ioc")
+router = APIRouter(prefix="/ioc", tags=["Айок"])
 
 
 @router.post('/')

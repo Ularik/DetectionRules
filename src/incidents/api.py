@@ -8,7 +8,7 @@ from src.services.incident_service import IncidentService
 QueryParams = Annotated[IncidentParams, Depends(IncidentParams)]
 
 
-router = APIRouter(prefix="/incidents")
+router = APIRouter(prefix="/incidents", tags=["Инциденты"])
 
 
 @router.get("/")

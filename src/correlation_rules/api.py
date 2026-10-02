@@ -5,7 +5,7 @@ from src.dependencies import DBDep, AuthUserDep
 from src.correlation_rules.schemas import CorrelationRuleRequestCreateUpdateSchema
 
 
-router = APIRouter(prefix="/correlation-rules")
+router = APIRouter(prefix="/correlation-rules", tags=["ПРавила корреляции"])
 
 
 @router.get("/")
