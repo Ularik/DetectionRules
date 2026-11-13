@@ -56,7 +56,7 @@ class IncidentEventResponseSchema(BaseModel):
     observer_host: str
 
     items: list[WazuhEventSchema] = Field(
-        default_factory=[]
+        default_factory=list
     )
 
     total: int = Field(ge=0)
@@ -65,7 +65,7 @@ class IncidentEventResponseSchema(BaseModel):
     returned: int = Field(ge=0)
 
     missing: list[Any] = Field(
-        default_factory=[]
+        default_factory=list
     )
 
     missing_count: int = Field(ge=0)
@@ -77,8 +77,8 @@ class UpdateAnalystStatusSchema(BaseModel):
     analyst_status: AnalystStatus
 
 class IncidentParams(BaseModel):
-    page: int
-    size: int
+    page: Optional[int] = None
+    size: Optional[int] = None
     organization_id: Optional[str] = None
     from_time: Optional[str] = None
     to_time: Optional[str] = None
@@ -104,29 +104,30 @@ class IncidentParams(BaseModel):
 
 
 class IncidentLite(BaseModel):
+    """Элемент списка /hunting/incidents (облегчённая запись, не полный Incident)."""
+    model_config = ConfigDict(extra="allow")
+
     incident_id: str
-    start_time: str
-    end_time: Optional[str] = None
-    severity: Literal["low", "medium", "high", "critical"]
-    risk_score: float  # или int, в зависимости от бизнес-логики
-    priority: int
-    analyst_status: Literal[
-        "new", "in_review", "confirmed", "false_positive", "closed"
-    ]
-    organization_id: str
-    attack_type: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    severity: Optional[str] = None
+    risk_score: Optional[float] = None
+    priority: Optional[int] = None
+    analyst_status: Optional[str] = None
+    organization_id: Optional[str] = None
+    attack_type: Optional[str] = None
     source_ip: Optional[str] = None
     source_user: Optional[str] = None
-    observer_host: str
+    observer_host: Optional[str] = None
     destination_ip: Optional[str] = None
     destination_host: Optional[str] = None
-    decision: Literal["decision ", "malicious"]  # сохранен опечаточный пробел из TypeScript
-    action: Literal["monitor", "block", "investigate"]
-    suppressed: bool
-    event_count: int
-    scenario_count: int
-    raw_event_count: int
-    ioc_match_count: int
+    decision: Optional[str] = None
+    action: Optional[str] = None
+    suppressed: Optional[bool] = None
+    event_count: int = 0
+    scenario_count: int = 0
+    raw_event_count: int = 0
+    ioc_match_count: int = 0
 
 
 class IncidentApiResponse(BaseModel):
@@ -174,16 +175,16 @@ class Incident(BaseModel):
 
     # Сетевые параметры и хосты
     source_ip: Optional[str] = None
-    source_ips: list[str] = list
-    source_users: list[str] = list
-    source_hosts: list[str] = list
+    source_ips: list[str] = Field(default_factory=list)
+    source_users: list[str] = Field(default_factory=list)
+    source_hosts: list[str] = Field(default_factory=list)
     observer_host: str
     destination_ip: str
     destination_ips: list[str]
     destination_host: str
     destination_hosts: list[str]
-    target_ports: list[int] = list
-    target_users: list[str] = list
+    target_ports: list[int] = Field(default_factory=list)
+    target_users: list[str] = Field(default_factory=list)
 
     # Метрики событий
     event_count: int
@@ -194,48 +195,48 @@ class Incident(BaseModel):
 
     # Источники логов и ссылки
     elastic_event_refs: list[ElasticEventRef]
-    log_source_types: list[str] = list
-    szi_sources: list[str] = list
-    product_names: list[str] = list
-    vendor_names: list[str] = list
+    log_source_types: list[str] = Field(default_factory=list)
+    szi_sources: list[str] = Field(default_factory=list)
+    product_names: list[str] = Field(default_factory=list)
+    vendor_names: list[str] = Field(default_factory=list)
 
     # Payload и HTTP атрибуты
-    payloads: list[Any] = list
+    payloads: list[Any] = Field(default_factory=list)
     payload_type: Optional[str] = None
-    payload_indicators: list[Any] = list
-    request_uris: list[str] = list
-    urls: list[str] = list
-    http_methods: list[str] = list
-    http_statuses: list[int] = list
-    user_agents: list[str] = list
+    payload_indicators: list[Any] = Field(default_factory=list)
+    request_uris: list[str] = Field(default_factory=list)
+    urls: list[str] = Field(default_factory=list)
+    http_methods: list[str] = Field(default_factory=list)
+    http_statuses: list[int] = Field(default_factory=list)
+    user_agents: list[str] = Field(default_factory=list)
 
     # Детекция и правила
-    event_actions: list[str] = list
-    signatures: list[str] = list
-    signature_ids: list[str] = list
-    attack_names: list[str] = list
-    detection_rule_ids: list[str] = list
-    detection_rule_descriptions: list[str] = list
-    detection_categories: list[str] = list
-    detection_confidences: list[float] = list
-    severity_hints: list[str] = list
+    event_actions: list[str] = Field(default_factory=list)
+    signatures: list[str] = Field(default_factory=list)
+    signature_ids: list[str] = Field(default_factory=list)
+    attack_names: list[str] = Field(default_factory=list)
+    detection_rule_ids: list[str] = Field(default_factory=list)
+    detection_rule_descriptions: list[str] = Field(default_factory=list)
+    detection_categories: list[str] = Field(default_factory=list)
+    detection_confidences: list[float] = Field(default_factory=list)
+    severity_hints: list[str] = Field(default_factory=list)
     scenario_type: Optional[str] = None
-    recommendations: list[str] = list
+    recommendations: list[str] = Field(default_factory=list)
 
     # Системные и лог-атрибуты (Windows / Linux)
-    event_codes: list[int] = list
-    winlog_channels: list[str] = list
-    computer_names: list[str] = list
-    process_names: list[str] = list
-    process_paths: list[str] = list
-    process_command_lines: list[str] = list
-    parent_process_names: list[str] = list
-    parent_process_paths: list[str] = list
-    parent_process_command_lines: list[str] = list
-    file_paths: list[str] = list
-    registry_keys: list[str] = list
-    service_names: list[str] = list
-    task_names: list[str] = list
+    event_codes: list[int] = Field(default_factory=list)
+    winlog_channels: list[str] = Field(default_factory=list)
+    computer_names: list[str] = Field(default_factory=list)
+    process_names: list[str] = Field(default_factory=list)
+    process_paths: list[str] = Field(default_factory=list)
+    process_command_lines: list[str] = Field(default_factory=list)
+    parent_process_names: list[str] = Field(default_factory=list)
+    parent_process_paths: list[str] = Field(default_factory=list)
+    parent_process_command_lines: list[str] = Field(default_factory=list)
+    file_paths: list[str] = Field(default_factory=list)
+    registry_keys: list[str] = Field(default_factory=list)
+    service_names: list[str] = Field(default_factory=list)
+    task_names: list[str] = Field(default_factory=list)
 
     # Подавление (Suppression)
     suppressed: bool
@@ -246,7 +247,7 @@ class Incident(BaseModel):
     # Описание и аналитика
     explanation: list[str]
     ai_analysis: Optional[str] = None
-    extra: dict[str, Any] = dict
+    extra: dict[str, Any] = Field(default_factory=dict)
 
     # Служебные Elastic полей и статус
     elastic_index: str = Field(..., alias="_elastic_index")
@@ -264,7 +265,7 @@ class Incident(BaseModel):
 class MitreInfo(BaseModel):
     ids: list[str]
     tactics: list[str]
-    techniques: list[str] = list
+    techniques: list[str] = Field(default_factory=list)
 
 
 class IncidentLinks(BaseModel):
@@ -274,11 +275,11 @@ class IncidentLinks(BaseModel):
 
 
 class IncidentSchema(BaseModel):
-    incident: Incident
-    scenario_ids: list[str] = list
-    related_scenarios: list[Any] = list
+    incident: Optional[Incident] = None
+    scenario_ids: list[str] = Field(default_factory=list)
+    related_scenarios: list[Any] = Field(default_factory=list)
     raw_event_count: int
     ioc_match_count: int
-    ioc_matches: list[str] = list
+    ioc_matches: list[str] = Field(default_factory=list)
     mitre: MitreInfo
     links: IncidentLinks

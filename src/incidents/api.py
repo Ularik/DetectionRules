@@ -20,6 +20,15 @@ async def get_incidents(
     return result
 
 
+@router.get("/daily_count_incidents")
+async def get_daily_count_incidents(
+        db: DBDep,
+        params: QueryParams
+):
+    result = await IncidentService(db).get_daily_count_of_incidents(params)
+    return result
+
+
 @router.get("/{inc_id}")
 async def get_incident_detail(
         db: DBDep,

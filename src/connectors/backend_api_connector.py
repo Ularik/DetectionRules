@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class BackendApi:
 
-    def __init__(self, url: str, timeout: int = 10):
+    def __init__(self, url: str, timeout: int = 20):
         self.url = url
         self.timeout = aiohttp.ClientTimeout(total=timeout)
         self.client: aiohttp.ClientSession | None = None
@@ -42,32 +42,39 @@ class BackendApi:
         return data
 
     async def request(
-        self,
-        method: str,
-        endpoint: str,
-        *,
-        data: Any = None,
-        params: dict[str, Any] | None = None,
-        headers: dict[str, str] | None = None,
+            self,
+            method: str,
+            endpoint: str,
+            *,
+            data: Any = None,
+            params: dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
+            timeout: int | float | None = None,
     ) -> Any:
-        """Централизованный метод отправки HTTP-запросов."""
         if self.client is None or self.client.closed:
-            raise RuntimeError("BackendApi client is not connected. Call connect() first.")
+            raise RuntimeError(
+                "BackendApi client is not connected. Call connect() first."
+            )
 
         json_payload = await self._prepare_json_data(data)
 
+        request_timeout = (
+            aiohttp.ClientTimeout(total=timeout)
+            if timeout is not None
+            else self.timeout
+        )
+
         try:
             async with self.client.request(
-                method=method,
-                url=endpoint,
-                json=json_payload,
-                params=params,
-                headers=headers,
+                    method=method,
+                    url=endpoint,
+                    json=json_payload,
+                    params=params,
+                    headers=headers,
+                    timeout=request_timeout,
             ) as response:
-                # Поднимает aiohttp.ClientResponseError при статусах 4xx/5xx
                 response.raise_for_status()
 
-                # Если ответ пустой (например, 204 No Content)
                 if response.status == 204:
                     return None
 
@@ -76,18 +83,33 @@ class BackendApi:
         except aiohttp.ClientResponseError as err:
             logger.error(
                 "Backend API вернул ошибку %s при %s %s: %s",
-                err.status, method, endpoint, err.message
+                err.status, method, endpoint, err.message,
             )
             raise
         except aiohttp.ClientError as err:
-            logger.error("Сетевая ошибка при запросе %s %s: %s", method, endpoint, err)
+            logger.error(
+                "Сетевая ошибка при запросе %s %s: %s",
+                method, endpoint, err,
+            )
             raise
 
-    async def get(self, endpoint: str, params: dict[str, Any] | None = None, **kwargs) -> Any:
-        return await self.request('GET', endpoint, params=params, **kwargs)
+    async def get(
+            self,
+            endpoint: str,
+            params: dict[str, Any] | None = None,
+            timeout: int | float | None = None,
+            **kwargs
+    ) -> Any:
+        return await self.request('GET', endpoint, params=params, timeout=timeout, **kwargs)
 
-    async def post(self, endpoint: str, data: Any = None, **kwargs) -> Any:
-        return await self.request('POST', endpoint, data=data, **kwargs)
+    async def post(
+            self,
+            endpoint: str,
+            data: Any = None,
+            timeout: int | float | None = None,
+            **kwargs
+    ) -> Any:
+        return await self.request('POST', endpoint, data=data, timeout=timeout, **kwargs)
 
     async def put(self, endpoint: str, data: Any = None, **kwargs) -> Any:
         return await self.request('PUT', endpoint, data=data, **kwargs)
