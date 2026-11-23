@@ -51,7 +51,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
   - только `ADMIN`: всё под `/api/rules/admin/*`;
   - только `ANALYST`: всё под `/api/rules/analyst/*`;
   - любой вошедший пользователь: `/users/me`, а также `/correlation-rules` (`GET /`, `GET /{id}`, `POST`, `PUT` — нужен для данных автора);
-  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, `/rules` (чтение), `/audits`, `/ioc`, `/supersession-rules`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `GET /correlation-rules/sequence` и `/group-by-fields`.
+  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, `/rules` (чтение), `/audits`, `/ioc`, `/supersession-rules`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `/sources`, `GET /correlation-rules/sequence` и `/group-by-fields`.
   Роль `VIEWER` нигде отдельно не проверяется.
 - Пагинация `PaginationDep`: `limit` 1–19 (по умолчанию 10), `offset` ≥ 0. Применяется в `/rules` и `/audits`; остальные списки используют собственные параметры (`IncidentParams`, `ScenarioQueryParams`, `IocQueryDep` и т.д.).
 - CORS: `allow_origins=["*"]` вместе с `allow_credentials=True`.
@@ -99,6 +99,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 | `/attack-types` | `GET /` |
 | `/events` | `GET /`, `GET /{index_name}/{event_id}` |
 | `/mitre` | `GET /mitre`, `POST /sync-mitre` (итоговые пути: `/api/mitre/mitre`, `/api/mitre/sync-mitre`) |
+| `/sources` | `GET /`, `POST /`, `GET /{source_id}/health`, `GET /{source_id}/sample-events`, `GET /{source_id}`, `PUT /{source_id}`, `DELETE /{source_id}` |
 
 Ограничения доступа см. в разделе 4. Порядок объявления маршрутов важен: статические пути (`/roles`, `/me`, `/sequence`, `/group-by-fields`, `/suppression-match-fields`, `/daily_count_incidents`, `/agents`) стоят перед параметрическими `/{id}`.
 `GET /users/` принимает параметр `department_id`, `GET /rules/` — `pattern`, `rule_id`, `description` (при `rule_id` возвращается один документ из ES, иначе поиск по тексту).

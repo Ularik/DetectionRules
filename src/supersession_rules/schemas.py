@@ -2,6 +2,8 @@ from datetime import datetime
 from typing import List, Optional, Literal, Union
 from pydantic import BaseModel, Field, model_validator
 
+from src.incidents.schemas import IncidentTestSchema
+
 
 class SuppressionMatchSchema(BaseModel):
     source_ip: Optional[str] = Field(default=None, description="IP-адрес источника")
@@ -11,9 +13,9 @@ class SuppressionMatchSchema(BaseModel):
     attack_type: Optional[str] = Field(default=None, description="Тип атаки")
     detection_rule_id: Optional[str] = Field(default=None, description="ID правила детектирования")
     category: Optional[str] = Field(default=None, description="Категория")
-    paths: List[str] = Field(default_factory=[], description="Список путей")
-    path_prefixes: List[str] = Field(default_factory=[], description="Префиксы путей")
-    contains: List[str] = Field(default_factory=[], description="Содержимое")
+    paths: List[str] = Field(default_factory=list, description="Список путей")
+    path_prefixes: List[str] = Field(default_factory=list, description="Префиксы путей")
+    contains: List[str] = Field(default_factory=list, description="Содержимое")
 
     @model_validator(mode="after")
     def check_at_least_one_field_present(self) -> "SuppressionMatchSchema":
@@ -32,7 +34,7 @@ class SuppressionMatchUpdateSchema(BaseModel):
 
 
 class SuppressionActionSchema(BaseModel):
-    mode: str | None = Field(default='supress', description="Режим подавления")
+    mode: str | None = Field(default='suppress', description="Режим подавления")
     attack_type: Optional[str] = Field(default=None, description="Переопределение типа атаки")
     decision: str | None = Field(default=None, description="Решение")
     severity: str = Field(..., description="Уровень суровости")
@@ -49,7 +51,7 @@ class SuppressionRuleSchema(BaseModel):
     reason: str = Field(..., description="Причина создания правила")
     match: SuppressionMatchSchema = Field(..., description="Условия срабатывания правила")
     action_details: SuppressionActionSchema = Field(..., alias="action", description="Действия при срабатывании")
-    tags: List[str] = Field(default_factory=[], description="Теги")
+    tags: List[str] = Field(default_factory=list, description="Теги")
     created_at: Optional[datetime] = Field(default=None, description="Дата и время создания")
     updated_at: Optional[datetime] = Field(default=None, description="Дата и время обновления")
     created_by: str | None = Field(default=None, description="Автор создания")
@@ -85,7 +87,7 @@ class SuppressionRuleUpdateSchema(BaseModel):
         description="Детальная причина подавления"
     )
     tags: List[str] = Field(
-        default_factory=[],
+        default_factory=list,
         description="Список тегов"
     )
 
@@ -101,7 +103,7 @@ class SuppressionRequestPostSchema(BaseModel):
     reason: str | None = Field(default=None, description="Причина создания правила")
     match: SuppressionMatchSchema = Field(..., description="Условия срабатывания правила")
     action_details: SuppressionActionSchema | None = Field(default=None, alias="action", description="Действия при срабатывании")
-    tags: List[str] = Field(default_factory=[], description="Теги")
+    tags: List[str] = Field(default_factory=list, description="Теги")
 
 
 class MatchFieldSchema(BaseModel):
@@ -138,3 +140,11 @@ class FrontendRulesForMatchFields(BaseModel):
     input: str
     number: str
     multi_input: str
+
+class SuppressionRuleStatusSchema(BaseModel):
+    enabled: bool = Field(..., description="Статус активности правила")
+
+
+class SuppressionRuleTestSchema(BaseModel):
+    rule: SuppressionRequestPostSchema = Field(..., description="Проверяемое правило подавления")
+    incident: IncidentTestSchema = Field(..., description="Инцидент, на котором проверяется правило")

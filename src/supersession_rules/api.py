@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from src.dependencies import DBDep, AuthUserDep
 from src.services.supersession_rules import SuperSessionService
-from src.supersession_rules.schemas import SuppressionRuleUpdateSchema, SuppressionRequestPostSchema
+from src.supersession_rules.schemas import SuppressionRuleUpdateSchema, SuppressionRequestPostSchema, \
+    SuppressionRuleStatusSchema, SuppressionRuleTestSchema
 
 
 router = APIRouter(prefix="/supersession-rules", tags=["Супер Правила"])
@@ -21,6 +22,13 @@ async def post_rule(
 ):
     return await SuperSessionService(db).post_rule(data)
 
+
+@router.post("/test")
+async def test_rule(
+        db: DBDep,
+        data: SuppressionRuleTestSchema
+):
+    return await SuperSessionService(db).test_rule(data)
 
 
 @router.get("/suppression-match-fields")
@@ -45,3 +53,20 @@ async def put_detail(
         data: SuppressionRuleUpdateSchema
 ):
     return await SuperSessionService(db).put_superset(super_id=super_id, data=data)
+
+
+@router.delete("/{super_id}")
+async def delete_rule(
+        db: DBDep,
+        super_id: str
+):
+    return await SuperSessionService(db).delete_rule(super_id=super_id)
+
+
+@router.patch("/{super_id}/status")
+async def set_status(
+        db: DBDep,
+        super_id: str,
+        data: SuppressionRuleStatusSchema
+):
+    return await SuperSessionService(db).set_status(super_id=super_id, data=data)

@@ -3,6 +3,8 @@ from datetime import datetime
 from pydantic import BaseModel, Field, FieldValidationInfo, ConfigDict, field_validator
 import re
 
+from src.incidents.schemas import IncidentTestSchema
+
 # ----------------------------------------------------------------------
 # Base Model (общие поля для чтения/записи)
 # ----------------------------------------------------------------------
@@ -56,12 +58,12 @@ class CorrelationRuleRequestCreateUpdateSchema(BaseModel):
         examples=[90],
     )
     recommendations: Optional[List[str]] = Field(
-        default_factory=[],
+        default_factory=list,
         description="Рекомендации аналитику",
         examples=[["Проверить успешные входы после серии неуспешных попыток"]],
     )
     tags: Optional[List[str]] = Field(
-        default_factory=[],
+        default_factory=list,
         description="Теги правила",
         examples=[["ssh", "bruteforce"]],
     )
@@ -110,3 +112,11 @@ class CorrelationRuleUpdateESSchema(CorrelationRuleRequestCreateUpdateSchema):
 class CorrelationApiResponseSchema(BaseModel):
     status: str
     rule: CorrelationRuleESSchema
+
+class CorrelationRuleStatusSchema(BaseModel):
+    enabled: bool = Field(..., description="Статус активности правила")
+
+
+class CorrelationRuleTestSchema(BaseModel):
+    rule: CorrelationRuleRequestCreateUpdateSchema = Field(..., description="Проверяемое правило корреляции")
+    incidents: List[IncidentTestSchema] = Field(..., description="Инциденты, на которых проверяется правило")

@@ -156,45 +156,45 @@ class Incident(BaseModel):
     organization_id: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
-    duration_seconds: float
+    duration_seconds: float | None = None
 
     # Классификация MITRE ATT&CK и атаки
-    attack_type: str
-    mitre_ids: list[str]
-    tactics: list[str]
-    kill_chain: str
-    attack_id: str
-    campaign_id: str
-    scenario_ids: list[str]
-    risk_score: int
-    severity: str
-    decision: str
-    action: str
-    priority: int
-    score_breakdown: ScoreBreakdown
+    attack_type: str | None = None
+    mitre_ids: list[str] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    kill_chain: str | None = None
+    attack_id: str | None = None
+    campaign_id: str | None = None
+    scenario_ids: list[str] = Field(default_factory=list)
+    risk_score: int | None = None
+    severity: str | None = None
+    decision: str | None = None
+    action: str | None = None
+    priority: int | None = None
+    score_breakdown: ScoreBreakdown | None = None
 
     # Сетевые параметры и хосты
     source_ip: Optional[str] = None
     source_ips: list[str] = Field(default_factory=list)
     source_users: list[str] = Field(default_factory=list)
     source_hosts: list[str] = Field(default_factory=list)
-    observer_host: str
-    destination_ip: str
-    destination_ips: list[str]
-    destination_host: str
-    destination_hosts: list[str]
+    observer_host: str | None = None
+    destination_ip: str | None = None
+    destination_ips: list[str] = Field(default_factory=list)
+    destination_host: str | None = None
+    destination_hosts: list[str] = Field(default_factory=list)
     target_ports: list[int] = Field(default_factory=list)
     target_users: list[str] = Field(default_factory=list)
 
     # Метрики событий
-    event_count: int
-    micro_incidents: int
-    unique_sources: int
-    has_success: bool
-    session_key: str
+    event_count: int = 0
+    micro_incidents: int | None = None
+    unique_sources: int | None = None
+    has_success: bool | None = None
+    session_key: str | None = None
 
     # Источники логов и ссылки
-    elastic_event_refs: list[ElasticEventRef]
+    elastic_event_refs: list[ElasticEventRef] = Field(default_factory=list)
     log_source_types: list[str] = Field(default_factory=list)
     szi_sources: list[str] = Field(default_factory=list)
     product_names: list[str] = Field(default_factory=list)
@@ -239,20 +239,20 @@ class Incident(BaseModel):
     task_names: list[str] = Field(default_factory=list)
 
     # Подавление (Suppression)
-    suppressed: bool
+    suppressed: bool = False
     suppression_mode: Optional[str] = None
     suppression_rule: Optional[str] = None
     suppression_reason: Optional[str] = None
 
     # Описание и аналитика
-    explanation: list[str]
+    explanation: list[str] = Field(default_factory=list)
     ai_analysis: Optional[str] = None
     extra: dict[str, Any] = Field(default_factory=dict)
 
     # Служебные Elastic полей и статус
     elastic_index: str = Field(..., alias="_elastic_index")
     elastic_id: str = Field(..., alias="_elastic_id")
-    analyst_status: str
+    analyst_status: str | None = None
 
     asset_id: str | None = None
     asset_hostname: str | None = None
@@ -283,3 +283,28 @@ class IncidentSchema(BaseModel):
     ioc_matches: list[str] = Field(default_factory=list)
     mitre: MitreInfo
     links: IncidentLinks
+
+
+class IncidentTestSchema(BaseModel):
+    """Инцидент для тестирования правил подавления/корреляции.
+
+    Описаны основные поля схемы Incident внешнего API, остальные поля
+    (их около сотни) принимаются как есть и передаются без изменений.
+    """
+    model_config = ConfigDict(extra="allow")
+
+    incident_id: str = Field(..., description="Идентификатор инцидента")
+    organization_id: str | None = Field(default=None, description="Идентификатор организации")
+    attack_type: str = Field(default="unknown", description="Тип атаки")
+    scenario_type: str | None = Field(default=None, description="Тип сценария")
+    source_ip: str | None = Field(default=None, description="IP-адрес источника")
+    destination_ip: str | None = Field(default=None, description="IP-адрес назначения")
+    observer_host: str | None = Field(default=None, description="Хост-наблюдатель")
+    target_ports: list[Any] = Field(default_factory=list, description="Порты назначения")
+    request_uris: list[str] = Field(default_factory=list, description="Запрошенные URI")
+    detection_rule_ids: list[str] = Field(default_factory=list, description="ID сработавших правил")
+    detection_categories: list[str] = Field(default_factory=list, description="Категории детектирования")
+    severity: str = Field(default="low", description="Уровень критичности")
+    risk_score: float = Field(default=0.0, description="Оценка риска")
+    start_time: str | None = Field(default=None, description="Начало инцидента")
+    end_time: str | None = Field(default=None, description="Окончание инцидента")

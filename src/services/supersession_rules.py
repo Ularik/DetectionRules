@@ -1,6 +1,7 @@
 from src.services.base import BaseService
 from src.supersession_rules.schemas import SuppressionRuleSchema, SuppressionRuleUpdateSchema, \
-    SuppressionRuleCreateUpdateResultSchema, MatchFieldResponseSchema, SuppressionRequestPostSchema
+    SuppressionRuleCreateUpdateResultSchema, MatchFieldResponseSchema, SuppressionRequestPostSchema, \
+    SuppressionRuleStatusSchema, SuppressionRuleTestSchema
 
 
 class SuperSessionService(BaseService):
@@ -24,3 +25,13 @@ class SuperSessionService(BaseService):
     async def post_rule(self, data: SuppressionRequestPostSchema) -> SuppressionRuleCreateUpdateResultSchema:
         result = await self.main_backend.post("/suppression-rules", data=data)
         return SuppressionRuleCreateUpdateResultSchema.model_validate(result)
+
+    async def delete_rule(self, super_id: str):
+        # схема ответа во внешнем API не описана, отдаём как есть
+        return await self.main_backend.delete(f"/suppression-rules/{super_id}")
+
+    async def set_status(self, super_id: str, data: SuppressionRuleStatusSchema):
+        return await self.main_backend.patch(f"/suppression-rules/{super_id}/status", data=data)
+
+    async def test_rule(self, data: SuppressionRuleTestSchema):
+        return await self.main_backend.post("/suppression-rules/test", data=data)
