@@ -53,6 +53,12 @@ class RuleService(BaseService):
 
     async def update_rule(self, user: UserInCookiesSchema, rule_id: str, data: RuleRequestCreateUpdateSchema):
 
+        # текущая версия из ES: нужна для created_by/created_at, заодно 404 если правила нет
+        current_rule: RuleESSchema = await self.find_one(rule_id)
+
+        # rule_id неизменяемый — берем из пути, а не из тела
+        data = data.model_copy(update={"rule_id": rule_id})
+
         # создаем новый объект в БД с новым unique_id
         new_rule_version: RuleInDbSchema = await self.db.ruleModel.create_object(data)
 
@@ -79,16 +85,24 @@ class RuleService(BaseService):
             old_audit.after_id = new_audit.id
             await self.db.auditModel.edit(id=old_audit.id, data=old_audit)
 
-        await self.db.save()
-
         _rule_elastic_data = RuleESSchema.model_validate(
             {**new_rule_version.model_dump(),  # меняем id авторов на имена
+             "created_by": current_rule.created_by,
+             "created_at": current_rule.created_at,
              "updated_by": user.username
              }
         )
-        res: RuleESSchema = await self.es.rulesRepository.update(doc_id=rule_id, data=_rule_elastic_data)
+        # сначала ES, потом commit: если ES упадет, версия в PG откатится
+        res: RuleESSchema = await self.es.rulesRepository.update_rule(doc_id=rule_id, data=_rule_elastic_data)
+        await self.db.save()
 
         return res
+
+    async def get_detection_categories(self):
+        return await self.main_backend.get("/detection-categories")
+
+    async def get_detection_scopes(self):
+        return await self.main_backend.get("/detection-scopes")
 
 
     async def test_rule(self, data: TestRuleSchema) -> TestRuleResponseSchema:

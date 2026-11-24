@@ -46,13 +46,13 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 - Логин: `POST /api/users/login` проверяет пароль (bcrypt, выполняется в `ThreadPoolExecutor` на 4 потока), выдаёт JWT (`exp` = `ACCESS_TOKEN_EXPIRE_MINUTES`) и ставит cookie `access_token` (`secure=False`); токен также возвращается в теле ответа. Выход — `DELETE /api/users/logout` удаляет cookie.
 - Токен читается из cookie (`get_token`), декодируется `AuthService.decode_token` → `UserInCookiesSchema` (содержит `user_id`, `username`, `role`). Ошибки: нет токена → 401 «Вы не передали токен аутентификации», просрочен → 401 «Сессия истекла, войдите снова», невалиден → 401 «Некорректный токен доступа».
 - Роли (`UserRoles`): `ADMIN`, `ANALYST`, `VIEWER` (по умолчанию `VIEWER`).
-- Зависимости (`src/dependencies.py`): `AuthUserDep` (любой аутентифицированный), `get_admin_user` (только `ADMIN`, иначе 403), `get_analyst_user` (только `ANALYST`, иначе 403). Проверка — точное совпадение роли, т.е. `ADMIN` не имеет доступа к маршрутам аналитика.
+- Зависимости (`src/dependencies.py`): `AuthUserDep` / `get_current_user` (любой аутентифицированный), `get_admin_user` (только `ADMIN`, иначе 403), `get_editor_user` / `EditorUserDep` (`ADMIN` или `ANALYST`, иначе 403), `get_analyst_user` (только `ANALYST`, сейчас не используется).
 - **Реальное покрытие авторизацией:**
   - только `ADMIN`: всё под `/api/rules/admin/*`;
-  - только `ANALYST`: всё под `/api/rules/analyst/*`;
-  - любой вошедший пользователь: `/users/me`, а также `/correlation-rules` (`GET /`, `GET /{id}`, `POST`, `PUT` — нужен для данных автора);
-  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, `/rules` (чтение), `/audits`, `/ioc`, `/supersession-rules`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `/sources`, `GET /correlation-rules/sequence` и `/group-by-fields`.
-  Роль `VIEWER` нигде отдельно не проверяется.
+  - `ADMIN` или `ANALYST`: всё под `/api/rules/analyst/*`; изменяющие ручки `/correlation-rules` (`POST /`, `POST /test`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/status`), `/supersession-rules` (`POST /`, `POST /test`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/status`) и `/ioc` (`POST /`, `PATCH /{id}`);
+  - любой вошедший пользователь: `/users/me`, чтение `/rules` (`GET /`, `GET /{rule_id}`, `GET /enums/*`) и `/correlation-rules` (`GET /`, `GET /{id}`);
+  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, чтение `/ioc` и `/supersession-rules`, `/audits`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `/sources`, `GET /correlation-rules/sequence` и `/group-by-fields`.
+  `VIEWER` — только чтение: изменять правила обнаружения, корреляции, подавления и IOC не может.
 - Пагинация `PaginationDep`: `limit` 1–19 (по умолчанию 10), `offset` ≥ 0. Применяется в `/rules` и `/audits`; остальные списки используют собственные параметры (`IncidentParams`, `ScenarioQueryParams`, `IocQueryDep` и т.д.).
 - CORS: `allow_origins=["*"]` вместе с `allow_credentials=True`.
 
@@ -61,7 +61,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 Для `detection_rules` каждое создание/изменение порождает **новую строку** с новым `unique_id`; неизменяемый идентификатор правила — `rule_id`.
 
 Создание: строка в PG → запись аудита → документ в ES → `db.save()`.
-Обновление: новая строка в PG → поиск последней записи аудита правила → новая запись аудита с `before_id` = предыдущая → у предыдущей `after_id` = новая → `db.save()` → обновление документа в ES по `rule_id`.
+Обновление: чтение текущего документа из ES (404, если нет; из него берутся `created_by`/`created_at`) → новая строка в PG (`rule_id` берётся из пути) → поиск последней записи аудита правила → новая запись аудита с `before_id` = предыдущая → у предыдущей `after_id` = новая → обновление документа в ES по `rule_id` → `db.save()`.
 В ES-документ вместо id авторов пишутся имена (`created_by`, `updated_by`).
 Для правил корреляции аналогичная цепочка в `correlation_audit`.
 
@@ -69,7 +69,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 
 ## 6. Модель данных (PostgreSQL)
 
-**detection_rules** — `unique_id` (PK), `rule_id` (str 50), `enabled`, `rule_type`, `scope`, `match_type`, `pattern` (str 500), `fields[]`, `case_sensitive`, `category`, `attack_type`, `scenario_type`, `mitre_ids[]`, `tactics[]`, `severity_hint` (enum `info|low|medium|high|critical`), `confidence` (0–100, CHECK), `description`, `explanation_template`, `recommendations[]`, `tags[]`, `created_at`, `updated_at`.
+**detection_rules** — `unique_id` (PK), `rule_id` (str 50), `enabled`, `rule_type`, `scope`, `match_type`, `pattern` (str 500), `fields[]`, `case_sensitive`, `condition_mode` (`all|any`), `conditions` (JSONB, список `{field, operator, value, case_sensitive}`), `category`, `attack_type`, `scenario_type`, `mitre_ids[]`, `tactics[]`, `severity_hint` (enum `info|low|medium|high|critical`), `confidence` (0–100, CHECK), `description`, `explanation_template`, `recommendations[]`, `enabled_reason`, `false_positive_notes`, `tags[]`, `created_at`, `updated_at`. Схема запроса повторяет `DetectionRule` из API движка: обязательны `rule_id`, `category`, `attack_type`, `description`, остальное с дефолтами движка.
 
 **users** — `id`, `username` (unique, 50), `hashed_password` (bytes), `role` (`UserRoles`), `created_at`, `updated_at`.
 
@@ -86,13 +86,13 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 | Префикс | Эндпоинты |
 |---|---|
 | `/users` | `POST /login`, `POST /`, `GET /`, `GET /roles`, `GET /me`, `GET /{id}`, `DELETE /logout` |
-| `/rules` | `GET /` (поиск: `pattern`, `rule_id`, `description` + пагинация), `GET /{rule_id}`, `GET /enums/severity-hints` |
+| `/rules` | `GET /` (поиск: `pattern`, `rule_id`, `description` + пагинация), `GET /{rule_id}`, `GET /enums/severity-hints`, `GET /enums/detection-categories`, `GET /enums/detection-scopes` (прокси `/detection-categories`, `/detection-scopes`) |
 | `/rules/admin` (ADMIN) | `POST /`, `PUT /{rule_id}`, `DELETE /{rule_id}`, `PATCH /{rule_id}` (статус), `POST /test` |
-| `/rules/analyst` (ANALYST) | `POST /`, `PUT /{rule_id}` |
+| `/rules/analyst` (ADMIN, ANALYST) | `POST /`, `PUT /{rule_id}` |
 | `/audits` | `GET /rule/{rule_id}`, `GET /`, `GET /{id}` |
 | `/ioc` | `POST /`, `GET /`, `GET /{ioc_id}`, `PATCH /{ioc_id}` |
-| `/supersession-rules` | `GET /`, `POST /`, `GET /suppression-match-fields`, `GET /{super_id}`, `PUT /{super_id}` |
-| `/correlation-rules` | `GET /`, `GET /sequence`, `GET /group-by-fields`, `GET /{correlation_id}`, `POST /`, `PUT /{correlation_id}` |
+| `/supersession-rules` | `GET /`, `POST /`, `POST /test`, `GET /suppression-match-fields`, `GET /{super_id}`, `PUT /{super_id}`, `DELETE /{super_id}`, `PATCH /{super_id}/status` |
+| `/correlation-rules` | `GET /`, `GET /sequence`, `GET /group-by-fields`, `GET /{correlation_id}`, `POST /`, `POST /test`, `PUT /{correlation_id}`, `DELETE /{correlation_id}`, `PATCH /{correlation_id}/status` |
 | `/scenarios` | `GET /`, `GET /{id}`, `GET /{id}/events` |
 | `/incidents` | `GET /`, `GET /daily_count_incidents`, `GET /{inc_id}`, `GET /{inc_id}/events`, `PATCH /{inc_id}/status` |
 | `/organizations` | `GET /`, `GET /agents`, `GET /{id}`, `POST /`, `PUT /{organization_id}`, `DELETE /{organization_id}` |
@@ -141,7 +141,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 - Автотестов и настроенных линтеров нет (`src/services/test_rules_service.py` — сервис функции «тест правила», не набор тестов).
 - Дублирование в путях MITRE: `/api/mitre/mitre`.
 - Опечатки в тегах Swagger («ПРавила корреляции», «Истороия изменений», «Айок») — косметика, но видна в документации.
-- Роли `ADMIN` и `ANALYST` взаимоисключающие на маршрутах `/rules/admin` и `/rules/analyst`.
+- `/rules/admin` доступен только `ADMIN`; `/rules/analyst` — `ADMIN` и `ANALYST`.
 - Большинство эндпоинтов, включая создание пользователей (`POST /users/`), не требуют аутентификации (см. раздел 4).
 - В `src/users/api.py` две функции названы `get_me` (для `/me` и `/{id}`); работает, так как регистрация идёт по декоратору.
 - Обработчики исключений делают `raise HTTPException` вместо возврата ответа; покрыты только `RuleNotFoundException` и `RuleAlreadyExistException`.

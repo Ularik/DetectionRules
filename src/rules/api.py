@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from src.rules.models import SeverityHintEnum
 from src.services.rules_services import RuleService
-from src.dependencies import DBDep, PaginationDep, get_admin_user, get_analyst_user, AuthUserDep
+from src.dependencies import DBDep, PaginationDep, get_admin_user, get_editor_user, get_current_user
 from src.rules.admin.api import router as admin_router
 from src.rules.analyst.api import router as analyst_router
 
@@ -16,11 +16,11 @@ router.include_router(
 
 router.include_router(
     analyst_router,
-    dependencies=[Depends(get_analyst_user)]
+    dependencies=[Depends(get_editor_user)]  # ADMIN тоже может пользоваться ручками аналитика
 )
 
 
-@router.get("/", tags=["Правила"])
+@router.get("/", tags=["Правила"], dependencies=[Depends(get_current_user)])
 async def get_rules(
         db: DBDep,
         paging: PaginationDep,
@@ -31,17 +31,27 @@ async def get_rules(
     return await RuleService(db).find_rules(pattern, description, rule_id, limit=paging.limit, offset=paging.offset)
 
 
-@router.get("/{rule_id}", tags=["Правила"])
+@router.get("/enums/severity-hints", tags=["Правила"], dependencies=[Depends(get_current_user)])
+async def get_severity_hints():
+    return [e.value for e in SeverityHintEnum]
+
+
+@router.get("/enums/detection-categories", tags=["Правила"], dependencies=[Depends(get_current_user)])
+async def get_detection_categories(db: DBDep):
+    return await RuleService(db).get_detection_categories()
+
+
+@router.get("/enums/detection-scopes", tags=["Правила"], dependencies=[Depends(get_current_user)])
+async def get_detection_scopes(db: DBDep):
+    return await RuleService(db).get_detection_scopes()
+
+
+@router.get("/{rule_id}", tags=["Правила"], dependencies=[Depends(get_current_user)])
 async def get_one_rule(
         rule_id: str,
         db: DBDep,
         ):
     rule = await RuleService(db).find_one(rule_id)
     return rule
-
-
-@router.get("/enums/severity-hints", tags=["Правила"])
-async def get_severity_hints():
-    return [e.value for e in SeverityHintEnum]
 
 

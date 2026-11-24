@@ -68,3 +68,7 @@ class ElasticRulesRepository(ElasticRepository):
     async def get_one_rule(self, doc_id: str) -> RuleESSchema:
         res = await super().get_by_id(doc_id=doc_id)
         return RuleESSchema.model_validate(res)
+
+    async def update_rule(self, doc_id: str, data: RuleESSchema) -> RuleESSchema:
+        res = await super().update(doc_id=doc_id, body=data.model_dump())
+        return RuleESSchema.model_validate(res)

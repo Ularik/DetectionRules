@@ -24,4 +24,5 @@ async def update_rule(
         data: RuleRequestCreateUpdateSchema,
         user: AuthUserDep
         ):
-    pass
+    new_rule = await RuleService(db).update_rule(user=user, rule_id=rule_id, data=data)
+    return new_rule

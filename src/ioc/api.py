@@ -1,6 +1,6 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from src.ioc.schemas import IocCreateSchema
-from src.dependencies import DBDep
+from src.dependencies import DBDep, get_editor_user
 from src.services.ioc_service import IocService
 from src.ioc.dependencies import IocQueryDep
 
@@ -8,7 +8,7 @@ from src.ioc.dependencies import IocQueryDep
 router = APIRouter(prefix="/ioc", tags=["Айок"])
 
 
-@router.post('/')
+@router.post('/', dependencies=[Depends(get_editor_user)])
 async def post_ioc(
         db: DBDep,
         data: IocCreateSchema
@@ -31,7 +31,7 @@ async def get_ioc(
 ):
     return await IocService(db).get_ioc_detail(ioc_id)
 
-@router.patch('/{ioc_id}')
+@router.patch('/{ioc_id}', dependencies=[Depends(get_editor_user)])
 async def patch_ioc(
         db: DBDep,
         ioc_id: str

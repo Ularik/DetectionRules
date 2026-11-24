@@ -1,5 +1,5 @@
-from fastapi import APIRouter
-from src.dependencies import DBDep, AuthUserDep
+from fastapi import APIRouter, Depends
+from src.dependencies import DBDep, AuthUserDep, get_editor_user
 from src.services.supersession_rules import SuperSessionService
 from src.supersession_rules.schemas import SuppressionRuleUpdateSchema, SuppressionRequestPostSchema, \
     SuppressionRuleStatusSchema, SuppressionRuleTestSchema
@@ -15,7 +15,7 @@ async def get_rules(
     return await SuperSessionService(db).get_supersets()
 
 
-@router.post("/")
+@router.post("/", dependencies=[Depends(get_editor_user)])
 async def post_rule(
         db: DBDep,
         data: SuppressionRequestPostSchema
@@ -23,7 +23,7 @@ async def post_rule(
     return await SuperSessionService(db).post_rule(data)
 
 
-@router.post("/test")
+@router.post("/test", dependencies=[Depends(get_editor_user)])
 async def test_rule(
         db: DBDep,
         data: SuppressionRuleTestSchema
@@ -46,7 +46,7 @@ async def get_detail(
     return await SuperSessionService(db).get_detail_superset(super_id=super_id)
 
 
-@router.put("/{super_id}")
+@router.put("/{super_id}", dependencies=[Depends(get_editor_user)])
 async def put_detail(
         db: DBDep,
         super_id: str,
@@ -55,7 +55,7 @@ async def put_detail(
     return await SuperSessionService(db).put_superset(super_id=super_id, data=data)
 
 
-@router.delete("/{super_id}")
+@router.delete("/{super_id}", dependencies=[Depends(get_editor_user)])
 async def delete_rule(
         db: DBDep,
         super_id: str
@@ -63,7 +63,7 @@ async def delete_rule(
     return await SuperSessionService(db).delete_rule(super_id=super_id)
 
 
-@router.patch("/{super_id}/status")
+@router.patch("/{super_id}/status", dependencies=[Depends(get_editor_user)])
 async def set_status(
         db: DBDep,
         super_id: str,

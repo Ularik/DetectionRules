@@ -5,28 +5,49 @@ from src.rules.models import SeverityHintEnum
 from datetime import datetime
 
 
-class RuleRequestCreateUpdateSchema(BaseModel):
+class RuleConditionSchema(BaseModel):
+    """Условие правила (RuleCondition в API движка)"""
+    field: str
+    operator: Literal["contains", "equals", "startswith", "endswith"] = "contains"
+    value: str
+    case_sensitive: bool = False
+
+
+class RuleBaseSchema(BaseModel):
+    """Поля правила с дефолтами как в DetectionRule API движка.
+    Нестрогая версия — для чтения из ES/PG, где старые документы могут быть неполными."""
     rule_id: str
-    enabled: bool
-    rule_type: str | None = None
-    scope: str | None = None
-    match_type: str | None = None
-    pattern: str
-    fields: list[str]
-    case_sensitive: bool
+    enabled: bool = True
+    rule_type: str | None = "payload_pattern"
+    scope: str | None = "generic"
+    match_type: str | None = "contains"
+    pattern: str = ""
+    fields: list[str] = Field(default_factory=list)
+    case_sensitive: bool = False
+    condition_mode: Literal["all", "any"] = "all"
+    conditions: list[RuleConditionSchema] = Field(default_factory=list)
     category: str | None = None
     attack_type: str | None = None
     scenario_type: str | None = None
-    mitre_ids: list[str]
-    tactics: list[str]
-    severity_hint: SeverityHintEnum
-    confidence: int | None = None
+    mitre_ids: list[str] = Field(default_factory=list)
+    tactics: list[str] = Field(default_factory=list)
+    severity_hint: SeverityHintEnum = SeverityHintEnum.MEDIUM
+    confidence: int | None = Field(70, ge=0, le=100)
     description: str | None = None
     explanation_template: str | None = None
-    recommendations: list[str]
-    tags: list[str]
+    recommendations: list[str] = Field(default_factory=list)
+    enabled_reason: str | None = None
+    false_positive_notes: str | None = None
+    tags: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+
+class RuleRequestCreateUpdateSchema(RuleBaseSchema):
+    """Тело запроса на создание/изменение: category, attack_type, description обязательны, как в API движка"""
+    category: str
+    attack_type: str
+    description: str
 
 
 class RuleSetStatusSchema(BaseModel):
@@ -38,13 +59,13 @@ class RuleSetStatusApiResponseSchema(BaseModel):
     rule: "RuleESSchema"
 
 
-class RuleInDbSchema(RuleRequestCreateUpdateSchema):
+class RuleInDbSchema(RuleBaseSchema):
     created_at: datetime
     updated_at: datetime
     unique_id: int
 
 
-class RuleESSchema(RuleRequestCreateUpdateSchema):   # в базе elastic храним прямо в поля created_by, upda...
+class RuleESSchema(RuleBaseSchema):   # в базе elastic храним прямо в поля created_by, upda...
     created_by: str
     updated_by: str
     created_at: datetime | None
@@ -53,7 +74,7 @@ class RuleESSchema(RuleRequestCreateUpdateSchema):   # в базе elastic хр�
     model_config = ConfigDict(from_attributes=True, extra='ignore')
 
 
-class RuleDBSchema(RuleRequestCreateUpdateSchema):
+class RuleDBSchema(RuleBaseSchema):
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

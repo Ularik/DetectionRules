@@ -37,6 +37,19 @@ async def get_current_user(token: str = Depends(get_token)) -> UserInCookiesSche
 
 AuthUserDep = Annotated[UserInCookiesSchema, Depends(get_current_user)]
 
+
+async def get_editor_user(user_data: UserInCookiesSchema = Depends(get_current_user)) -> UserInCookiesSchema:
+    """ADMIN или ANALYST — роли, которым разрешено изменять правила (VIEWER только читает)"""
+    if user_data.role not in ("ADMIN", "ANALYST"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Недостаточно прав для выполнения операции"
+        )
+    return user_data
+
+
+EditorUserDep = Annotated[UserInCookiesSchema, Depends(get_editor_user)]
+
 async def get_admin_user(user_data: UserInCookiesSchema = Depends(get_current_user)) -> UserInCookiesSchema:
     if user_data.role != "ADMIN":
         raise HTTPException(

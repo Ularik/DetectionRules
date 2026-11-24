@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from src.services.correlation_rules_service import CorrelationRuleService
 from src.services.reference_service import ReferenceService
-from src.dependencies import DBDep, AuthUserDep
+from src.dependencies import DBDep, AuthUserDep, EditorUserDep
 from src.correlation_rules.schemas import CorrelationRuleRequestCreateUpdateSchema, CorrelationRuleStatusSchema, \
     CorrelationRuleTestSchema
 
@@ -47,7 +47,7 @@ async def get_crules(
 @router.post("/")
 async def post_crule(
         db: DBDep,
-        user: AuthUserDep,
+        user: EditorUserDep,
         data: CorrelationRuleRequestCreateUpdateSchema
 ):
     result = await CorrelationRuleService(db).create_crule(data=data, user=user)
@@ -57,7 +57,7 @@ async def post_crule(
 @router.post("/test")
 async def test_crule(
         db: DBDep,
-        user: AuthUserDep,
+        user: EditorUserDep,
         data: CorrelationRuleTestSchema
 ):
     return await CorrelationRuleService(db).test_crule(data=data)
@@ -67,7 +67,7 @@ async def test_crule(
 async def put_crule(
         db: DBDep,
         correlation_id: str,
-        user: AuthUserDep,
+        user: EditorUserDep,
         data: CorrelationRuleRequestCreateUpdateSchema
 ):
     result = await CorrelationRuleService(db).put_crule(data=data, user=user, correlation_id=correlation_id)
@@ -78,7 +78,7 @@ async def put_crule(
 async def delete_crule(
         db: DBDep,
         correlation_id: str,
-        user: AuthUserDep
+        user: EditorUserDep
 ):
     return await CorrelationRuleService(db).delete_crule(user=user, correlation_id=correlation_id)
 
@@ -87,7 +87,7 @@ async def delete_crule(
 async def set_crule_status(
         db: DBDep,
         correlation_id: str,
-        user: AuthUserDep,
+        user: EditorUserDep,
         data: CorrelationRuleStatusSchema
 ):
     return await CorrelationRuleService(db).set_status(user=user, correlation_id=correlation_id, data=data)
