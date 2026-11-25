@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Mapped, mapped_column
 from src.database import Base
 from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Integer, CheckConstraint, func, ARRAY, ForeignKey
+from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 from enum import Enum
 
@@ -33,6 +34,8 @@ class DetectionRuleModel(Base):
         nullable=True,
         default=list)
     case_sensitive: Mapped[bool] = mapped_column(default=False)
+    condition_mode: Mapped[str] = mapped_column(String(10), default="all", server_default="all")
+    conditions: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     category: Mapped[str | None] = mapped_column(String(100))
     attack_type: Mapped[str | None] = mapped_column(String(100))
     scenario_type: Mapped[str | None] = mapped_column(String(100))
@@ -61,6 +64,8 @@ class DetectionRuleModel(Base):
         nullable=True,
         default=list
     )
+    enabled_reason: Mapped[str | None] = mapped_column(String(500))
+    false_positive_notes: Mapped[str | None] = mapped_column(String(1000))
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(String(50)),
         nullable=True,

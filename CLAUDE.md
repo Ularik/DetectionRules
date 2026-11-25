@@ -28,8 +28,8 @@ A detection-rules management API (rules, correlation rules, supersession rules, 
 
 - `BaseService(db)` gives every service `self.db` (DbManager), `self.es` (ElasticManager) and `self.main_backend` (backend_api).
 - `DbManager` (`src/utils/db_manager.py`) is an async context manager holding one session and all PG repositories (`ruleModel`, `auditModel`, `correlationModel`, ...). It **rolls back on exit**, so writes only persist if the service calls `await self.db.save()` (commit). New repositories must be added to `DbManager.__aenter__`.
-- Routers get the manager through `DBDep`; auth through `AuthUserDep`; role gates via `get_admin_user` / `get_analyst_user` (exact role match: `"ADMIN"` / `"ANALYST"`, so an admin cannot hit analyst-only routes). JWT is read from the `access_token` cookie. See `src/dependencies.py` (also `PaginationDep`, limit must be 0<limit<20).
-- Auth is opt-in per route: only `/rules/admin/*` (ADMIN) and `/rules/analyst/*` (ANALYST) are role-gated, `/correlation-rules` (except `/sequence` and `/group-by-fields`) and `/users/me` need any logged-in user, and most other routers (incl. `POST /users/`) have no auth dependency. Add `AuthUserDep` / a role dep explicitly on new routes that need protection.
+- Routers get the manager through `DBDep`; auth through `AuthUserDep` / `get_current_user`; role gates via `get_admin_user` (ADMIN only) and `get_editor_user` / `EditorUserDep` (ADMIN or ANALYST). JWT is read from the `access_token` cookie. See `src/dependencies.py` (also `PaginationDep`, limit must be 0<limit<20).
+- Auth is opt-in per route: `/rules/admin/*` is ADMIN-only; `/rules/analyst/*` and all write routes of `/correlation-rules`, `/supersession-rules`, `/ioc` need ADMIN or ANALYST (VIEWER is read-only); reads of `/rules` and `/correlation-rules` and `/users/me` need any logged-in user; most other routers (incl. `POST /users/`) have no auth dependency. Add `AuthUserDep` / a role dep explicitly on new routes that need protection.
 - Lifespan in `src/main.py` connects Elasticsearch (`src/init.py:elastic_manager`) and the backend API session; `health()` failure is only logged, not fatal.
 
 ### Rule versioning / audit flow (`src/services/rules_services.py`)
@@ -38,7 +38,7 @@ Rules are versioned: each create/update inserts a **new row with a new `unique_i
 
 ### Misc
 
-- Errors: custom exceptions in `src/exceptions/exceptions.py`; `setup_exceptions` (`exception_handler.py`) only maps `RuleNotFoundException` (404) and `RuleAlreadyExistException` (400). Any other custom exception (e.g. `AuditNotFoundException`, `UserNotFoundException`) needs a handler added there or it surfaces as a 500. Backend API errors (`aiohttp.ClientResponseError`) are re-raised unmapped.
+- Errors: custom exceptions in `src/exceptions/exceptions.py`; `setup_exceptions` (`exception_handler.py`) maps rule 404/400, `AuditNotFoundException` (404), `InvalidSearchParamsException` (400), `StorageUnavailableException` (503) and backend API errors (`aiohttp.ClientResponseError` 404/4xx pass-through, else 502; connection 502; timeout 504). ES errors are converted in `src/repositories/elastic/base.py`. Other custom exceptions (e.g. `UserNotFoundException`) still need a handler or surface as 500. Document route errors with `responses=error_responses(...)` from `src/exceptions/schemas.py`.
 - `src/database.py`: with `MODE=DOCKER`, `POSTGRES_HOST` in the DB URL is replaced by `POSTGRES_HOST_DOCKER`; `MODE=TEST` uses `NullPool`.
 - Route order matters: static paths (`/me`, `/roles`, `/sequence`, `/agents`, ...) are declared before `/{id}` routes in each router.
 - User-facing messages, comments and commit messages are in Russian; keep that convention.

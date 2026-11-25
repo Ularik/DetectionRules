@@ -20,9 +20,10 @@ class AuditRepository(BaseRepository):
             )
             .filter_by(id=audit_id)
         )
-        print(query.compile(compile_kwargs={"literal_binds": True}))
-        res = await self.session.execute(query)
-        return AuditOutFullSchema.model_validate(res.scalars().first())
+        res = (await self.session.execute(query)).scalars().first()
+        if res is None:
+            raise AuditNotFoundException
+        return AuditOutFullSchema.model_validate(res)
 
     async def get_last_audit(self, rule_id: str) -> AuditOutSchema:
         query = (
