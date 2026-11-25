@@ -308,3 +308,46 @@ class IncidentTestSchema(BaseModel):
     risk_score: float = Field(default=0.0, description="Оценка риска")
     start_time: str | None = Field(default=None, description="Начало инцидента")
     end_time: str | None = Field(default=None, description="Окончание инцидента")
+
+
+class IncidentArtifactSchema(BaseModel):
+    """Технический признак, извлечённый из поля RAW-события."""
+    type: str = Field(..., description="Тип артефакта (command, ip, user и т.д.)")
+    value: Any = Field(None, description="Значение")
+    field: str | None = Field(None, description="Поле RAW-события, из которого взят артефакт")
+
+
+class IncidentArtifactEventRefSchema(BaseModel):
+    index: str = Field(..., description="Индекс Elasticsearch")
+    id: str = Field(..., description="Идентификатор документа")
+
+
+class IncidentArtifactItemSchema(BaseModel):
+    """Артефакты одного RAW-события инцидента."""
+    event_id: str | None = None
+    timestamp: str | None = None
+    hostname: str | None = None
+    source_id: str | None = None
+    source_name: str | None = None
+    action: str | None = None
+    rule_id: str | None = None
+    rule_description: str | None = None
+    rule_level: int | None = None
+    mitre_ids: list[str] = Field(default_factory=list)
+    artifacts: list[IncidentArtifactSchema] = Field(default_factory=list)
+    artifact_count: int = 0
+    event_ref: IncidentArtifactEventRefSchema | None = None
+    raw_url: str | None = Field(None, description="Путь к RAW-событию во внешнем API")
+
+
+class IncidentArtifactsResponseSchema(BaseModel):
+    """Ответ /hunting/incidents/{id}/artifacts; пагинация по исходным событиям."""
+    incident_id: str
+    organization_id: str | None = None
+    items: list[IncidentArtifactItemSchema] = Field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    size: int = 50
+    returned: int = 0
+    missing: list[Any] = Field(default_factory=list)
+    missing_count: int = 0

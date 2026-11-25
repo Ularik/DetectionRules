@@ -10,6 +10,8 @@ router = APIRouter(prefix="/audits", tags=["Истороия изменений"
 
 # действия, которые пишет CorrelationRuleService
 CorrelationAuditAction = Literal["created", "updated", "status_changed", "deleted"]
+# действия, которые пишет RuleService
+RuleAuditAction = Literal["created", "updated"]
 
 
 # ---------- история правил корреляции (до /{id}, иначе путь перехватит /{id}) ----------
@@ -74,9 +76,12 @@ async def get_correlation_audit_detail(
 async def get_rule_audits_with_authors(
         db: DBDep,
         rule_id: str,
-        paging: PaginationDep
+        paging: PaginationDep,
+        action: RuleAuditAction | None = Query(default=None, description="Фильтр по действию"),
 ):
-    res = await AuditService(db).get_audits_with_authors(rule_general_id=rule_id, limit=paging.limit, offset=paging.offset)
+    res = await AuditService(db).get_audits_with_authors(
+        rule_general_id=rule_id, action=action, limit=paging.limit, offset=paging.offset
+    )
     return res
 
 

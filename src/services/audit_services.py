@@ -8,12 +8,15 @@ class AuditService(BaseService):
     async def get_audits_with_authors(
             self,
           rule_general_id: str = None,
+          action: str | None = None,
           limit: int = 10,
           offset: int = 0,
           **kwargs
     ) -> ApiAuditWithAuthorSchema:
         if rule_general_id:
             kwargs["rule_general_id"] = rule_general_id
+        if action:
+            kwargs["action"] = action
         res = await self.db.auditModel.get_audits(limit=limit, offset=offset, **kwargs)
         return res
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Body
+from fastapi import APIRouter, Depends, Body, Query
 from src.dependencies import DBDep
 from src.incidents.schemas import IncidentParams, UpdateAnalystStatusSchema
 from typing import Annotated
@@ -38,15 +38,29 @@ async def get_incident_detail(
     return result
 
 
-@router.get("/{inc_id}/events")
+@router.get("/{inc_id}/events", summary="Raw Events конкретного инцидента")
 async def get_incident_events(
         db: DBDep,
         inc_id: str,
-        page: int = 1,
-        size: int = 10
+        page: int = Query(default=1, ge=1, description="Номер страницы, начиная с 1"),
+        size: int = Query(default=50, ge=1, le=200, description="Количество событий на странице"),
 ):
+    """Исходные события Wazuh, участвовавшие в формировании инцидента (по `elastic_event_refs`).
+    У старых инцидентов без `elastic_event_refs` `items` может быть пустым — это не ошибка."""
     result = await IncidentService(db).get_incident_events(inc_id, page=page, size=size)
     return result
+
+
+@router.get("/{inc_id}/artifacts", summary="Технические артефакты инцидента")
+async def get_incident_artifacts(
+        db: DBDep,
+        inc_id: str,
+        page: int = Query(default=1, ge=1, description="Номер страницы, начиная с 1"),
+        size: int = Query(default=50, ge=1, le=200, description="Количество исходных событий на странице"),
+):
+    """Технические признаки (команды, IP, пользователи и т.д.) из связанных RAW-событий инцидента,
+    без дедупликации. Пагинация применяется к исходным событиям."""
+    return await IncidentService(db).get_incident_artifacts(inc_id, page=page, size=size)
 
 
 @router.patch("/{inc_id}/status")

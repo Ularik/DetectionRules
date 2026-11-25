@@ -60,7 +60,7 @@ class CorrelationRuleModel(Base):
     min_unique_categories: Mapped[int | None] = mapped_column(
         Integer,
         default=1,
-        nullable=False,
+        nullable=True,
         comment="Минимальное число уникальных категорий для срабатывания",
     )
 

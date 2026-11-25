@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from src.incidents.schemas import IncidentParams, IncidentEventResponseSchema, IncidentApiResponse
 from src.services.base import BaseService
-from src.incidents.schemas import IncidentSchema
+from src.incidents.schemas import IncidentSchema, IncidentArtifactsResponseSchema
 
 
 class IncidentService(BaseService):
@@ -78,12 +78,19 @@ class IncidentService(BaseService):
         res = await self.main_backend.get(f"/hunting/incidents/{inc_id}")
         return IncidentSchema.model_validate(res)
 
-    async def get_incident_events(self, inc_id: str, page: int = 1, size: int = 10):
+    async def get_incident_events(self, inc_id: str, page: int = 1, size: int = 50):
         res = await self.main_backend.get(f"/hunting/incidents/{inc_id}/events", params={
             "page": page,
             "size": size
         })
         return IncidentEventResponseSchema.model_validate(res)
+
+    async def get_incident_artifacts(self, inc_id: str, page: int = 1, size: int = 50):
+        res = await self.main_backend.get(f"/hunting/incidents/{inc_id}/artifacts", params={
+            "page": page,
+            "size": size
+        })
+        return IncidentArtifactsResponseSchema.model_validate(res)
 
     async def patch_incident(self, inc_id: str, analyst_status: str):
         await self.main_backend.patch(f"/hunting/incidents/{inc_id}/status", data={"analyst_status": analyst_status})
