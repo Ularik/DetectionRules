@@ -1,28 +1,55 @@
-from src.exceptions.exceptions import ObjectNotFoundException, RuleNotFoundException, AuditNotFoundException
+from src.exceptions.exceptions import ObjectNotFoundException, RuleNotFoundException, AuditNotFoundException, \
+    InvalidSearchParamsException
 from src.services.base import BaseService
-from src.rules.schemas import RuleRequestCreateUpdateSchema, RuleInDbSchema, \
-    RuleESSchema, RuleSetStatusSchema, RuleSetStatusApiResponseSchema, TestRuleSchema, TestRuleResponseSchema
+from src.rules.schemas import RuleRequestCreateUpdateSchema, RuleInDbSchema, RuleApiResponseSchema, \
+    RuleESSchema, RuleSetStatusSchema, RuleSetStatusApiResponseSchema, TestRuleSchema, TestRuleResponseSchema, \
+    RuleDeleteResponseSchema
 from src.audit.schemas import AuditAddSchema, AuditOutSchema, AuditOutWithAuthorSchema
 
 from src.users.schemas import UserInCookiesSchema
+
+# index.max_result_window в ES по умолчанию: дальше from + size поиск не листает
+ES_MAX_RESULT_WINDOW = 10_000
+
+
+def _clean(value: str | None) -> str | None:
+    """Пустые строки и строки из пробелов считаем отсутствующим фильтром"""
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
 
 
 class RuleService(BaseService):
 
     async def find_rules(self,
-                         pattern: str = None,
-                         description: str = None,
-                         rule_id: str = None,
+                         pattern: str | None = None,
+                         description: str | None = None,
+                         rule_id: str | None = None,
                          limit: int = 10,
-                         offset: int = 0) -> dict | None:
-        text = pattern or description
+                         offset: int = 0) -> RuleApiResponseSchema:
+        """Поиск правил в ES. Всегда возвращает страницу {total, has_next, items}:
+        с rule_id — страницу из 0 или 1 правила, иначе — полнотекстовый поиск по pattern и description."""
+        if offset + limit > ES_MAX_RESULT_WINDOW:
+            raise InvalidSearchParamsException(
+                f"Нельзя пролистать дальше {ES_MAX_RESULT_WINDOW} записей: уточните условия поиска"
+            )
+
+        pattern, description, rule_id = _clean(pattern), _clean(description), _clean(rule_id)
 
         if rule_id:
-            return await self.es.rulesRepository.get_one_rule(doc_id=rule_id)
-        return await self.es.rulesRepository.search_rules(text=text, limit=limit, offset=offset)
+            try:
+                rule = await self.es.rulesRepository.get_one_rule(doc_id=rule_id)
+            except ObjectNotFoundException:
+                return RuleApiResponseSchema(total=0, has_next=False, items=[])
+            return RuleApiResponseSchema(total=1, has_next=False, items=[rule] if offset == 0 else [])
+
+        return await self.es.rulesRepository.search_rules(
+            pattern=pattern, description=description, limit=limit, offset=offset
+        )
 
 
-    async def find_one(self, rule_id: str) -> dict:
+    async def find_one(self, rule_id: str) -> RuleESSchema:
         try:
             return await self.es.rulesRepository.get_one_rule(doc_id=rule_id)
         except ObjectNotFoundException as err:
@@ -98,19 +125,25 @@ class RuleService(BaseService):
 
         return res
 
-    async def get_detection_categories(self):
-        return await self.main_backend.get("/detection-categories")
-
-    async def get_detection_scopes(self):
-        return await self.main_backend.get("/detection-scopes")
-
 
     async def test_rule(self, data: TestRuleSchema) -> TestRuleResponseSchema:
         result = await self.main_backend.post("/detection-rules/test", data=data)
         return TestRuleResponseSchema.model_validate(result)
 
 
-    async def delete(self, rule_id: str):
+    async def delete(self, rule_id: str) -> RuleDeleteResponseSchema:
+        # 404 до любых изменений; commit в PG только после успешного удаления из ES
+        await self.find_one(rule_id)
         await self.db.ruleModel.delete_bulk(rule_id=rule_id)
+        try:
+            res = await self.es.rulesRepository.delete(doc_id=rule_id)
+        except ObjectNotFoundException as err:
+            raise RuleNotFoundException from err
         await self.db.save()
-        return await self.es.rulesRepository.delete(doc_id=rule_id)
+        return RuleDeleteResponseSchema.model_validate(res.body)
+
+    async def get_detection_categories(self):
+        return await self.main_backend.get("/detection-categories")
+
+    async def get_detection_scopes(self):
+        return await self.main_backend.get("/detection-scopes")

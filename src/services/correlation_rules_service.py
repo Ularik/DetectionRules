@@ -8,7 +8,9 @@ from src.correlation_rules.schemas import (CorrelationRuleCreateSchema,
         CorrelationRuleUpdateESSchema,
         CorrelationRuleCreateFromOldSchema,
         CorrelationRuleStatusSchema,
-        CorrelationRuleTestSchema
+        CorrelationRuleTestSchema,
+        CorrelationRuleTestResponseSchema,
+        CorrelationRuleDeleteResponseSchema,
 )
 from src.exceptions.exceptions import AuditNotFoundException
 from src.services.base import BaseService
@@ -47,40 +49,43 @@ class CorrelationRuleService(BaseService):
         await self.db.save()
         return result.rule
 
-    async def get_crules(self):
+    async def get_crules(self) -> list[CorrelationRuleESSchema]:
         res = await self.main_backend.get("/correlation-rules")
         return [CorrelationRuleESSchema.model_validate(r) for r in res]
 
-    async def get_crule_detail(self, correlation_id: str):
+    async def get_crule_detail(self, correlation_id: str) -> CorrelationRuleESSchema:
         res = await self.main_backend.get(f"/correlation-rules/{correlation_id}")
         return CorrelationRuleESSchema.model_validate(res)
 
-    async def delete_crule(self, user: UserInCookiesSchema, correlation_id: str):
-        # снимок правила берём до удаления: после него внешний API его уже не отдаст
+    async def delete_crule(self, user: UserInCookiesSchema, correlation_id: str) -> CorrelationRuleDeleteResponseSchema:
+        # снимок правила берём до удаления: после него внешний API его уже не отдаст (заодно 404, если правила нет)
         rule = await self.get_crule_detail(correlation_id=correlation_id)
-        # схема ответа во внешнем API не описана, отдаём как есть
-        res = await self.main_backend.delete(f"/correlation-rules/{correlation_id}")
+        # формат ответа внешнего API не описан — отдаём фронту свой стабильный ответ
+        await self.main_backend.delete(f"/correlation-rules/{correlation_id}")
         await self._save_version_with_audit(rule=rule, user=user, action="deleted")
-        return res
+        return CorrelationRuleDeleteResponseSchema(correlation_id=rule.correlation_id)
 
-    async def set_status(self, user: UserInCookiesSchema, correlation_id: str, data: CorrelationRuleStatusSchema):
+    async def set_status(self, user: UserInCookiesSchema, correlation_id: str,
+                         data: CorrelationRuleStatusSchema) -> CorrelationRuleESSchema:
         res = await self.main_backend.patch(f"/correlation-rules/{correlation_id}/status", data=data)
-        # ответ статуса не описан в схеме API, поэтому актуальное состояние запрашиваем отдельно
-        rule = await self.get_crule_detail(correlation_id=correlation_id)
+        # внешний API отвечает {status, rule} — правило уже в актуальном состоянии
+        rule = CorrelationApiResponseSchema.model_validate(res).rule
         await self._save_version_with_audit(rule=rule, user=user, action="status_changed")
-        return res
+        return rule
 
-    async def test_crule(self, data: CorrelationRuleTestSchema):
-        return await self.main_backend.post("/correlation-rules/test", data=data)
+    async def test_crule(self, data: CorrelationRuleTestSchema) -> CorrelationRuleTestResponseSchema:
+        res = await self.main_backend.post("/correlation-rules/test", data=data)
+        return CorrelationRuleTestResponseSchema.model_validate(res)
 
-    async def put_crule(self, user: UserInCookiesSchema, correlation_id: str, data: CorrelationRuleRequestCreateUpdateSchema):
+    async def put_crule(self, user: UserInCookiesSchema, correlation_id: str,
+                        data: CorrelationRuleRequestCreateUpdateSchema) -> CorrelationRuleESSchema:
 
         _data_for_es = CorrelationRuleUpdateESSchema(**data.model_dump(), updated_by=user.username)
         res = await self.main_backend.put(f"/correlation-rules/{correlation_id}", _data_for_es)
         res = CorrelationApiResponseSchema.model_validate(res)
 
         await self._save_version_with_audit(rule=res.rule, user=user, action="updated")
-        return res
+        return res.rule
 
     async def _save_version_with_audit(self, rule: CorrelationRuleESSchema, user: UserInCookiesSchema, action: str):
         """Сохраняет новую версию правила в PG и добавляет запись в цепочку аудита."""

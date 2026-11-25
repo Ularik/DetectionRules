@@ -8,6 +8,8 @@ class ElasticRulesRepository(ElasticRepository):
     async def search_rules(
             self,
             text: str | None = None,
+            pattern: str | None = None,
+            description: str | None = None,
             enabled_only: bool = False,  # Добавляем флаг для фильтрации активных правил
             limit: int = 10,
             offset: int = 0
@@ -16,7 +18,7 @@ class ElasticRulesRepository(ElasticRepository):
         must = []
         filter_conditions = []
 
-        # 1. Полнотекстовый поиск (если передан текст)
+        # 1. Полнотекстовый поиск: text — по обоим полям, pattern/description — каждый по своему полю
         if text:
             must.append({
                 "multi_match": {
@@ -26,6 +28,13 @@ class ElasticRulesRepository(ElasticRepository):
                     "fuzziness": "AUTO"
                 }
             })
+        for field_name, value in (("pattern", pattern), ("description", description)):
+            if value:
+                must.append({
+                    "match": {
+                        field_name: {"query": value, "fuzziness": "AUTO"}
+                    }
+                })
 
         # 2. Фильтрация по статусу enabled=True (для тестирования)
         if enabled_only:

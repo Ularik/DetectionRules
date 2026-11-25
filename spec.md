@@ -26,7 +26,7 @@ Redis указан в конфигурации (`REDIS_HOST/PORT`), но в ра
 
 1. **PostgreSQL** — источник истины для версий правил, аудита, пользователей, правил корреляции.
 2. **Elasticsearch** — актуальная копия правил; чтение и поиск правил идут отсюда (`src/repositories/elastic/`).
-3. **Внешний Backend API** (`BACKEND_API_URL`, singleton `backend_api` в `src/connectors/backend_api_connector.py`) — прокси для статуса и тестирования правил, MITRE, инцидентов, событий, сценариев, организаций и др. Клиент на aiohttp: таймаут по умолчанию 20 с, `raise_for_status`, ответ 204 → `None`, Pydantic-тела сериализуются через `model_dump(mode='json', by_alias=True)`.
+3. **Внешний Backend API** (`BACKEND_API_URL`, singleton `backend_api` в `src/connectors/backend_api_connector.py`) — прокси для статуса и тестирования правил, MITRE, инцидентов, событий, сценариев, организаций и др. Клиент на aiohttp: таймаут по умолчанию 20 с, `raise_for_status`, ответ 204 → `None`, Pydantic-тела сериализуются через `model_dump(mode='json', by_alias=True)`. Query-параметры (dict или Pydantic-модель) приводятся в `_prepare_params`: `None` отбрасывается, `datetime`/`date` → ISO-строка, `bool` → `true`/`false`, `Enum` → значение (aiohttp принимает в query только str/int/float).
 
 ### Слои
 
@@ -51,7 +51,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
   - только `ADMIN`: всё под `/api/rules/admin/*`;
   - `ADMIN` или `ANALYST`: всё под `/api/rules/analyst/*`; изменяющие ручки `/correlation-rules` (`POST /`, `POST /test`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/status`), `/supersession-rules` (`POST /`, `POST /test`, `PUT /{id}`, `DELETE /{id}`, `PATCH /{id}/status`) и `/ioc` (`POST /`, `PATCH /{id}`);
   - любой вошедший пользователь: `/users/me`, чтение `/rules` (`GET /`, `GET /{rule_id}`, `GET /enums/*`) и `/correlation-rules` (`GET /`, `GET /{id}`);
-  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, чтение `/ioc` и `/supersession-rules`, `/audits`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `/sources`, `GET /correlation-rules/sequence` и `/group-by-fields`.
+  - **без проверки токена**: `POST /users/`, `GET /users/`, `GET /users/{id}`, чтение `/ioc` и `/supersession-rules`, `/audits`, `/scenarios`, `/incidents`, `/organizations`, `/attack-types`, `/events`, `/mitre`, `/sources`, `/normalization-profiles`, `GET /correlation-rules/sequence`, `/group-by-fields` и `/scenario-types`.
   `VIEWER` — только чтение: изменять правила обнаружения, корреляции, подавления и IOC не может.
 - Пагинация `PaginationDep`: `limit` 1–19 (по умолчанию 10), `offset` ≥ 0. Применяется в `/rules` и `/audits`; остальные списки используют собственные параметры (`IncidentParams`, `ScenarioQueryParams`, `IocQueryDep` и т.д.).
 - CORS: `allow_origins=["*"]` вместе с `allow_credentials=True`.
@@ -63,7 +63,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 Создание: строка в PG → запись аудита → документ в ES → `db.save()`.
 Обновление: чтение текущего документа из ES (404, если нет; из него берутся `created_by`/`created_at`) → новая строка в PG (`rule_id` берётся из пути) → поиск последней записи аудита правила → новая запись аудита с `before_id` = предыдущая → у предыдущей `after_id` = новая → обновление документа в ES по `rule_id` → `db.save()`.
 В ES-документ вместо id авторов пишутся имена (`created_by`, `updated_by`).
-Для правил корреляции аналогичная цепочка в `correlation_audit`.
+Для правил корреляции аналогичная цепочка в `correlation_audit`: версия правила пишется в `correlation_rules` при создании (`created`), изменении (`updated`), смене статуса (`status_changed`) и удалении (`deleted`, снимок до удаления). Чтение — `/api/audits/correlation-rules*` (`CorrelationAuditService`): список с фильтрами `action`/`author_id` и пагинацией, история одного правила, детальная запись с версией правила и `changes` — списком `{field, old, new}` относительно записи `before_id` (служебные поля id/даты/авторы не сравниваются). Отсутствующая запись → 404 (`AuditNotFoundException`, теперь и для `/audits/{id}`).
 
 Смена статуса и тест правила выполняются через внешний API (`PATCH /detection-rules/{id}/status`, `POST /detection-rules/test`).
 
@@ -75,7 +75,7 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 
 **audit** — `id`, `author_id` → users, `action` (по умолчанию `create`), `resource_type`, `rule_general_id`, `rule_unique_id` → detection_rules, `before_id` / `after_id` → audit (SET NULL), `created_at`, `updated_at`.
 
-**correlation_rules** — `id`, `correlation_id`, `enabled`, `scenario_type` (индекс), `description`, `window_seconds`, `sequence` (JSONB), `group_by` (JSONB), `min_unique_categories` (по умолчанию 1), `severity` (тот же enum), `confidence`, `recommendations` (JSONB), `tags` (JSONB), `created_by`, `updated_by`, `created_at`, `updated_at`.
+**correlation_rules** — `id`, `correlation_id`, `enabled`, `scenario_type` (индекс), `description`, `window_seconds`, `sequence` (JSONB), `group_by` (JSONB), `min_unique_categories` (по умолчанию 1), `severity` (тот же enum), `confidence`, `recommendations` (JSONB), `tags` (JSONB), `mitre_ids` (JSONB, по умолчанию `[]`), `created_by`, `updated_by`, `created_at`, `updated_at`.
 
 **correlation_audit** — аналог `audit` для правил корреляции (`correlation_id`, `correlation_unique_id` → correlation_rules, `before_id` / `after_id`).
 
@@ -89,10 +89,10 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 | `/rules` | `GET /` (поиск: `pattern`, `rule_id`, `description` + пагинация), `GET /{rule_id}`, `GET /enums/severity-hints`, `GET /enums/detection-categories`, `GET /enums/detection-scopes` (прокси `/detection-categories`, `/detection-scopes`) |
 | `/rules/admin` (ADMIN) | `POST /`, `PUT /{rule_id}`, `DELETE /{rule_id}`, `PATCH /{rule_id}` (статус), `POST /test` |
 | `/rules/analyst` (ADMIN, ANALYST) | `POST /`, `PUT /{rule_id}` |
-| `/audits` | `GET /rule/{rule_id}`, `GET /`, `GET /{id}` |
+| `/audits` | `GET /correlation-rules`, `GET /correlation-rules/rule/{correlation_id}`, `GET /correlation-rules/{audit_id}` (история правил корреляции, нужен вход), `GET /rule/{rule_id}`, `GET /`, `GET /{id}` |
 | `/ioc` | `POST /`, `GET /`, `GET /{ioc_id}`, `PATCH /{ioc_id}` |
-| `/supersession-rules` | `GET /`, `POST /`, `POST /test`, `GET /suppression-match-fields`, `GET /{super_id}`, `PUT /{super_id}`, `DELETE /{super_id}`, `PATCH /{super_id}/status` |
-| `/correlation-rules` | `GET /`, `GET /sequence`, `GET /group-by-fields`, `GET /{correlation_id}`, `POST /`, `POST /test`, `PUT /{correlation_id}`, `DELETE /{correlation_id}`, `PATCH /{correlation_id}/status` |
+| `/supersession-rules` | `GET /`, `POST /`, `POST /test`, `GET /suppression-match-fields`, `GET /suppression-action-fields`, `GET /{super_id}`, `PUT /{super_id}`, `DELETE /{super_id}`, `PATCH /{super_id}/status` |
+| `/correlation-rules` | `GET /`, `GET /sequence`, `GET /group-by-fields`, `GET /scenario-types`, `GET /{correlation_id}`, `POST /`, `POST /test`, `PUT /{correlation_id}`, `DELETE /{correlation_id}`, `PATCH /{correlation_id}/status` |
 | `/scenarios` | `GET /`, `GET /{id}`, `GET /{id}/events` |
 | `/incidents` | `GET /`, `GET /daily_count_incidents`, `GET /{inc_id}`, `GET /{inc_id}/events`, `PATCH /{inc_id}/status` |
 | `/organizations` | `GET /`, `GET /agents`, `GET /{id}`, `POST /`, `PUT /{organization_id}`, `DELETE /{organization_id}` |
@@ -100,22 +100,35 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 | `/events` | `GET /`, `GET /{index_name}/{event_id}` |
 | `/mitre` | `GET /mitre`, `POST /sync-mitre` (итоговые пути: `/api/mitre/mitre`, `/api/mitre/sync-mitre`) |
 | `/sources` | `GET /`, `POST /`, `GET /{source_id}/health`, `GET /{source_id}/sample-events`, `GET /{source_id}`, `PUT /{source_id}`, `DELETE /{source_id}` |
+| `/normalization-profiles` | `GET /` (`enabled_only`), `POST /`, `GET /fields`, `POST /test`, `GET /{profile_name}`, `PUT /{profile_name}`, `DELETE /{profile_name}` |
 
-Ограничения доступа см. в разделе 4. Порядок объявления маршрутов важен: статические пути (`/roles`, `/me`, `/sequence`, `/group-by-fields`, `/suppression-match-fields`, `/daily_count_incidents`, `/agents`) стоят перед параметрическими `/{id}`.
-`GET /users/` принимает параметр `department_id`, `GET /rules/` — `pattern`, `rule_id`, `description` (при `rule_id` возвращается один документ из ES, иначе поиск по тексту).
+Ограничения доступа см. в разделе 4. Порядок объявления маршрутов важен: статические пути (`/roles`, `/me`, `/sequence`, `/group-by-fields`, `/scenario-types`, `/suppression-match-fields`, `/suppression-action-fields`, `/daily_count_incidents`, `/agents`) стоят перед параметрическими `/{id}`.
+`/correlation-rules`: тело `POST`/`PUT` соответствует `CorrelationRuleCreate`/`CorrelationRuleUpdate` API движка (обязательны `scenario_type`, `description`, `window_seconds`, `severity` — enum `critical|high|medium|low|info`, `confidence`; дополнительно у нас требуются непустые `sequence` и `group_by`; необязательный `mitre_ids` — список техник MITRE, значения из `GET /api/mitre/mitre`). Правило в `POST /test` — `CorrelationRuleTestData` движка: те же поля, но без `mitre_ids`. Ответы: `GET /`, `GET /{id}`, `POST /` (201), `PUT /{id}`, `PATCH /{id}/status` — правило `CorrelationRuleESSchema`; `DELETE /{id}` — `{correlation_id, deleted}`; в правиле есть `mitre_ids` (сохраняется в версии правила в PG и участвует в `changes` аудита); внешний API на `POST`/`PUT` отвечает `{status, rule, similar_rule_ids, warnings}`, на `PATCH /status` — `{status, rule}`, на `DELETE` — `{success, correlation_id}`, 404 — `Correlation rule not found`; `POST /test` — `{matched, scenario_type, severity, confidence, recommendations}`; `GET /sequence` — список `{value, label}`; `GET /group-by-fields` — `{items: [{value, label, description}], count}`; `GET /scenario-types` — `{items: [{value, label}], count}` (прокси `/reference/scenario-types`).
+`/supersession-rules` (прокси `/suppression-rules` внешнего API; в его doc.json схемы ответов пустые, сверено по фактическим ответам): `GET /`, `GET /{id}` — правило `SuppressionRuleSchema` (`reason`, все поля `action` кроме `suppressed` могут быть null); `POST /` (201), `PUT /{id}`, `PATCH /{id}/status` — `{success, rule}`; `DELETE /{id}` — `{success, suppression_id}`; `POST /test` — `{matched, mode, reason, result: {severity, decision, risk_score, action, suppressed}}` (при `matched=false` остальное null); отсутствующее правило → 404. Запросы: `POST /` и `rule` в `/test` — обязательны `description` и `match` (хотя бы одно условие, `dst_port` 1–65535), `enabled` по умолчанию `true`, `action` необязателен, все его поля опциональны (`mode` только `suppress`; `decision` `malicious|suspicious|benign`; `severity` `critical|high|medium|low|info`; `action` `block|investigate|monitor|ignore`; `risk_score` 0–100; `suppressed` по умолчанию `true`). `PUT /{id}` — тело `SuppressionRuleUpdate`: `description`, `match` (обязательны, `match` передаётся целиком), `reason`, `action`, `tags`; `action` — объект `SuppressionAction`, как в `POST /` (рекомендуемый вариант), либо строка `block|investigate|monitor|ignore` вместе с плоскими `decision`, `risk_score`, `suppressed`, `suppression_reason` (старый формат, оставлен для совместимости), либо null; `enabled` через PUT не меняется, неуказанные необязательные поля сбрасываются. `GET /suppression-action-fields` — прокси справочника полей `action` `{items: [{field, path, label, description, type, ui_control, multiple, required, default, values, reference, min, max}], count, frontend_rules}`.
+`GET /users/` принимает параметр `department_id`, `GET /rules/` — `pattern`, `rule_id`, `description` (ответ всегда `RuleApiResponseSchema` `{total, has_next, items}`: при `rule_id` — страница из 0 или 1 правила, иначе поиск: `pattern` по полю `pattern`, `description` по полю `description`; `offset + limit` не больше 10000).
 
 ## 8. Ошибки
 
-Исключения объявлены в `src/exceptions/exceptions.py`: `NoResultException` → `ObjectNotFoundException` → (`RuleNotFoundException`, `AuditNotFoundException`), `UserNotFoundException`; `UniqueObjIsExistException` → `RuleAlreadyExistException`; `HasNotRightsException`. У каждого есть русскоязычное поле `detail`.
+Исключения объявлены в `src/exceptions/exceptions.py`: `NoResultException` → `ObjectNotFoundException` → (`RuleNotFoundException`, `AuditNotFoundException`), `UserNotFoundException`; `UniqueObjIsExistException` → `RuleAlreadyExistException`; `HasNotRightsException`; `InvalidSearchParamsException`; `StorageUnavailableException`. У каждого есть русскоязычное поле `detail`.
 
-`setup_exceptions` (`exception_handler.py`) регистрирует обработчики **только для двух** исключений:
+`setup_exceptions` (`exception_handler.py`) возвращает `JSONResponse` вида `{"detail": "..."}` (схема `ErrorResponseSchema` в `src/exceptions/schemas.py`):
 
 | Исключение | HTTP |
 |---|---|
 | `RuleNotFoundException` | 404 |
+| `AuditNotFoundException` | 404 |
 | `RuleAlreadyExistException` | 400 |
+| `InvalidSearchParamsException` | 400 |
+| `StorageUnavailableException` (ES недоступен или вернул ошибку) | 503 |
+| `aiohttp.ClientResponseError` внешнего API: 404 | 404 |
+| то же: 400 / 409 / 422 | тот же код |
+| то же: 401 / 403 / 5xx | 502 |
+| `aiohttp.ClientConnectionError` | 502 |
+| `TimeoutError` (таймаут запроса к внешнему API) | 504 |
 
-Остальные (`ObjectNotFoundException`, `AuditNotFoundException`, `UserNotFoundException`, `HasNotRightsException`) обработчиков не имеют, если только сервис не конвертирует их сам (как `RuleService.find_one`: `ObjectNotFoundException` → `RuleNotFoundException`). Обработчики не возвращают ответ, а делают `raise HTTPException(...)` внутри обработчика, поведение такого подхода стоит проверить. Ошибки внешнего API (`aiohttp.ClientResponseError`) в HTTP-ответы не преобразуются.
+Ошибки Elasticsearch переводятся в исключения приложения в `src/repositories/elastic/base.py` (`_handle_es_errors`): `BadRequestError` → `InvalidSearchParamsException`, ошибки соединения и прочие `ApiError` → `StorageUnavailableException`; отсутствующий индекс при поиске даёт пустую выдачу.
+Остальные (`ObjectNotFoundException`, `UserNotFoundException`, `HasNotRightsException`) обработчиков не имеют, если только сервис не конвертирует их сам (как `RuleService.find_one`: `ObjectNotFoundException` → `RuleNotFoundException`).
+Для OpenAPI ошибки описываются на роутах через `responses=error_responses(...)`.
 
 ## 9. Конфигурация (`.env`, `src/config.py`)
 
@@ -140,9 +153,8 @@ src/<feature>/api.py  →  src/services/<feature>_service.py  →  репози�
 
 - Автотестов и настроенных линтеров нет (`src/services/test_rules_service.py` — сервис функции «тест правила», не набор тестов).
 - Дублирование в путях MITRE: `/api/mitre/mitre`.
-- Опечатки в тегах Swagger («ПРавила корреляции», «Истороия изменений», «Айок») — косметика, но видна в документации.
+- Опечатки в тегах Swagger («Истороия изменений», «Айок») — косметика, но видна в документации.
 - `/rules/admin` доступен только `ADMIN`; `/rules/analyst` — `ADMIN` и `ANALYST`.
 - Большинство эндпоинтов, включая создание пользователей (`POST /users/`), не требуют аутентификации (см. раздел 4).
 - В `src/users/api.py` две функции названы `get_me` (для `/me` и `/{id}`); работает, так как регистрация идёт по декоратору.
-- Обработчики исключений делают `raise HTTPException` вместо возврата ответа; покрыты только `RuleNotFoundException` и `RuleAlreadyExistException`.
 - В `update_rule` `resource_type` аудита заполняется значением `rule_id`.

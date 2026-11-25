@@ -38,7 +38,7 @@ Rules are versioned: each create/update inserts a **new row with a new `unique_i
 
 ### Misc
 
-- Errors: custom exceptions in `src/exceptions/exceptions.py`; `setup_exceptions` (`exception_handler.py`) only maps `RuleNotFoundException` (404) and `RuleAlreadyExistException` (400). Any other custom exception (e.g. `AuditNotFoundException`, `UserNotFoundException`) needs a handler added there or it surfaces as a 500. Backend API errors (`aiohttp.ClientResponseError`) are re-raised unmapped.
+- Errors: custom exceptions in `src/exceptions/exceptions.py`; `setup_exceptions` (`exception_handler.py`) maps rule 404/400, `AuditNotFoundException` (404), `InvalidSearchParamsException` (400), `StorageUnavailableException` (503) and backend API errors (`aiohttp.ClientResponseError` 404/4xx pass-through, else 502; connection 502; timeout 504). ES errors are converted in `src/repositories/elastic/base.py`. Other custom exceptions (e.g. `UserNotFoundException`) still need a handler or surface as 500. Document route errors with `responses=error_responses(...)` from `src/exceptions/schemas.py`.
 - `src/database.py`: with `MODE=DOCKER`, `POSTGRES_HOST` in the DB URL is replaced by `POSTGRES_HOST_DOCKER`; `MODE=TEST` uses `NullPool`.
 - Route order matters: static paths (`/me`, `/roles`, `/sequence`, `/agents`, ...) are declared before `/{id}` routes in each router.
 - User-facing messages, comments and commit messages are in Russian; keep that convention.

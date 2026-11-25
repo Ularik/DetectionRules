@@ -1,4 +1,6 @@
 import logging
+from datetime import date, datetime
+from enum import Enum
 from typing import Any
 import aiohttp
 from pydantic import BaseModel
@@ -41,6 +43,36 @@ class BackendApi:
             return data.model_dump(mode='json', by_alias=True)
         return data
 
+    @staticmethod
+    def _prepare_query_value(value: Any) -> Any:
+        """aiohttp принимает в query только str/int/float: приводим datetime, Enum, bool и т.п."""
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, (str, int, float)):
+            return value
+        if isinstance(value, (datetime, date)):
+            return value.isoformat()
+        if isinstance(value, Enum):
+            return BackendApi._prepare_query_value(value.value)
+        return str(value)
+
+    @classmethod
+    def _prepare_params(cls, params: Any) -> dict[str, Any] | None:
+        """Приводит параметры запроса (dict или Pydantic-модель) к виду, который понимает aiohttp; None отбрасывается."""
+        if params is None:
+            return None
+        if isinstance(params, BaseModel):
+            params = params.model_dump(by_alias=True)
+        prepared = {}
+        for key, value in params.items():
+            if value is None:
+                continue
+            if isinstance(value, (list, tuple, set)):
+                prepared[key] = [cls._prepare_query_value(v) for v in value if v is not None]
+            else:
+                prepared[key] = cls._prepare_query_value(value)
+        return prepared
+
     async def request(
             self,
             method: str,
@@ -69,7 +101,7 @@ class BackendApi:
                     method=method,
                     url=endpoint,
                     json=json_payload,
-                    params=params,
+                    params=self._prepare_params(params),
                     headers=headers,
                     timeout=request_timeout,
             ) as response:

@@ -65,13 +65,52 @@ class RuleInDbSchema(RuleBaseSchema):
     unique_id: int
 
 
-class RuleESSchema(RuleBaseSchema):   # в базе elastic храним прямо в поля created_by, upda...
-    created_by: str
-    updated_by: str
-    created_at: datetime | None
-    updated_at: datetime | None
+# Пример правила для OpenAPI (ответы ручек правил обнаружения)
+RULE_ES_EXAMPLE: dict[str, Any] = {
+    "rule_id": "web_sqli_union_select",
+    "enabled": True,
+    "rule_type": "payload_pattern",
+    "scope": "web",
+    "match_type": "contains",
+    "pattern": "union select",
+    "fields": ["request_uri", "payloads"],
+    "case_sensitive": False,
+    "condition_mode": "all",
+    "conditions": [
+        {"field": "http_method", "operator": "equals", "value": "GET", "case_sensitive": False}
+    ],
+    "category": "sql_injection",
+    "attack_type": "sql_injection",
+    "scenario_type": "web_attack",
+    "mitre_ids": ["T1190"],
+    "tactics": ["Initial Access"],
+    "severity_hint": "high",
+    "confidence": 85,
+    "description": "Попытка SQL-инъекции через UNION SELECT в URI запроса",
+    "explanation_template": "В запросе к {destination_host} обнаружен фрагмент UNION SELECT",
+    "recommendations": ["Проверить логи веб-приложения", "Заблокировать IP-источник на WAF"],
+    "enabled_reason": None,
+    "false_positive_notes": "Возможны срабатывания на сканерах безопасности из белого списка",
+    "tags": ["web", "sqli"],
+    "created_by": "ular",
+    "updated_by": "analyst1",
+    "created_at": "2026-11-20T10:15:00+06:00",
+    "updated_at": "2026-11-24T09:30:00+06:00",
+}
 
-    model_config = ConfigDict(from_attributes=True, extra='ignore')
+
+class RuleESSchema(RuleBaseSchema):   # в базе elastic храним прямо в поля created_by, upda...
+    # могут отсутствовать у правил, созданных напрямую через API движка
+    created_by: str | None = None
+    updated_by: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra='ignore',
+        json_schema_extra={"examples": [RULE_ES_EXAMPLE]},
+    )
 
 
 class RuleDBSchema(RuleBaseSchema):
@@ -82,9 +121,25 @@ class RuleDBSchema(RuleBaseSchema):
 
 
 class RuleApiResponseSchema(BaseModel):
-  total: int
-  has_next: bool
-  items: list[RuleESSchema]
+    """Страница результатов поиска правил"""
+    total: int = Field(description="Всего найдено правил")
+    has_next: bool = Field(description="Есть ли следующая страница")
+    items: list[RuleESSchema]
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"total": 1, "has_next": False, "items": [RULE_ES_EXAMPLE]}]
+    })
+
+
+class RuleDeleteResponseSchema(BaseModel):
+    """Результат удаления правила (ответ Elasticsearch)"""
+    id: str = Field(alias="_id", description="rule_id удалённого правила")
+    result: str = Field(description="Результат операции в ES")
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_schema_extra={"examples": [{"_id": "web_sqli_union_select", "result": "deleted"}]},
+    )
 
 
 class Event(BaseModel):
@@ -188,5 +243,9 @@ class TestRuleSchema(BaseModel):
 
 
 class TestRuleResponseSchema(BaseModel):
-    matched: bool
+    matched: bool = Field(description="Сработало ли правило на событии")
     rule_id: str
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"matched": True, "rule_id": "web_sqli_union_select"}]
+    })

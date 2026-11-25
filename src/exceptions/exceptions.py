@@ -28,3 +28,15 @@ class HasNotRightsException(Exception):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+class InvalidSearchParamsException(Exception):
+    detail = "Некорректные параметры поиска"
+    def __init__(self, detail: str | None = None):
+        if detail:
+            self.detail = detail
+        super().__init__(self.detail)
+
+class StorageUnavailableException(Exception):
+    detail = "Хранилище правил (Elasticsearch) недоступно, попробуйте позже"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+

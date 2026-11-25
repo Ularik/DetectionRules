@@ -22,7 +22,7 @@ class RawEventsQueryParamsSchema(BaseModel):
     text: Optional[str] = Field(default=None, description="Полнотекстовый поиск по логу")
 
     page: int = Field(default=1, ge=1, description="Номер страницы (начиная с 1)")
-    size: int = Field(default=50, ge=1, le=1000, description="Количество записей на страницу")
+    size: int = Field(default=50, ge=1, le=200, description="Количество записей на страницу (максимум 200, как в API движка)")
 
     model_config = ConfigDict(
         from_attributes=True,

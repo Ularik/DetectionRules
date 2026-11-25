@@ -87,6 +87,13 @@ class CorrelationRuleModel(Base):
         nullable=True,
         comment="Теги правила",
     )
+    mitre_ids: Mapped[List[str]] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        server_default="[]",
+        comment="Техники MITRE ATT&CK",
+    )
     created_by: Mapped[str]
     updated_by: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(
