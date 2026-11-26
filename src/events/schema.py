@@ -72,8 +72,8 @@ class WazuhHostSchema(BaseModel):
     id: str | None = None
     containerized: bool | None = None
     name: str | None = None
-    ip: list[str] = Field(default_factory=[])
-    mac: list[str] = Field(default_factory=[])
+    ip: list[str] = Field(default_factory=list)
+    mac: list[str] = Field(default_factory=list)
     hostname: str | None = None
     architecture: str | None = None
 

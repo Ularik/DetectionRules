@@ -146,7 +146,8 @@ class RuleDeleteResponseSchema(BaseModel):
 
 
 class Event(BaseModel):
-    timestamp: datetime = Field(..., description="ISO 8601 timestamp")
+    """Тестовое событие — NormalizedEvent движка (все поля необязательны)"""
+    timestamp: Optional[datetime] = Field(None, description="ISO 8601 timestamp")
     timestamp_raw: Optional[str] = None
 
     # Сетевые параметры
@@ -155,22 +156,24 @@ class Event(BaseModel):
     source_host: Optional[str] = None
     destination_ip: Optional[str] = None
     destination_host: Optional[str] = None
+    src_port: Optional[int] = None
     dst_port: Optional[int] = None
+    protocol: Optional[str] = None
     observer_host: Optional[str] = None
 
     # Правила и сигнатуры
     rule_id: Optional[str] = None
     rule_level: Optional[int] = None
     rule_name: Optional[str] = None
-    rule_groups: list[str] = Field(default_factory=[])
+    rule_groups: list[str] = Field(default_factory=list)
     signature: Optional[str] = None
     signature_id: Optional[str] = None
     attack_name: Optional[str] = None
 
     # MITRE ATT&CK
-    mitre_ids: list[str] = Field(default_factory=[])
-    mitre_tactics: list[str] = Field(default_factory=[])
-    mitre_techniques: list[str] = Field(default_factory=[])
+    mitre_ids: list[str] = Field(default_factory=list)
+    mitre_tactics: list[str] = Field(default_factory=list)
+    mitre_techniques: list[str] = Field(default_factory=list)
 
     # Детекция и классификация
     event_type: str = "unknown"
@@ -184,9 +187,12 @@ class Event(BaseModel):
     attack_type: Optional[str] = None
     scenario_type: Optional[str] = None
     explanation_template: Optional[str] = None
-    recommendations: list[str] = Field(default_factory=[])
+    recommendations: list[str] = Field(default_factory=list)
 
     # Источник логов и Вендор
+    source_id: Optional[str] = None
+    organization_id: Optional[str] = None
+    normalization_profile: Optional[str] = None
     log_source_type: Optional[str] = None
     szi_source: Optional[str] = None
     product_name: Optional[str] = None
@@ -201,9 +207,9 @@ class Event(BaseModel):
     referrer: Optional[str] = None
 
     # Пейлоад
-    payloads: list[str] = Field(default_factory=[])
+    payloads: list[str] = Field(default_factory=list)
     payload_type: Optional[str] = None
-    payload_indicators: list[str] = Field(default_factory=[])
+    payload_indicators: list[str] = Field(default_factory=list)
 
     # Системные события Windows / ОС
     event_code: Optional[str] = None
@@ -237,8 +243,9 @@ class Event(BaseModel):
     service_name: Optional[str] = None
     task_name: Optional[str] = None
 
-    # Произвольные сырые данные
-    raw: dict[str, Any] = Field()
+    # Произвольные данные
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
+    raw: dict[str, Any] = Field(default_factory=dict)
 
 class TestRuleSchema(BaseModel):
     rule: RuleRequestCreateUpdateSchema

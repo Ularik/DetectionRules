@@ -10,6 +10,7 @@ from src.rules.models import SeverityHintEnum
 # Пример правила корреляции для OpenAPI (формат ответа внешнего API)
 CORRELATION_RULE_ES_EXAMPLE: dict = {
     "correlation_id": "CORR-0031399A",
+    "name": "SSH brute force и успешный вход",
     "enabled": True,
     "scenario_type": "ssh_bruteforce_chain",
     "description": "Корреляция SSH brute force и последующего успешного входа",
@@ -102,6 +103,7 @@ class CorrelationRuleBaseSchema(BaseModel):
 
 
 MITRE_IDS_DESCRIPTION = "Техники MITRE ATT&CK (значения — из GET /api/mitre/mitre)"
+NAME_DESCRIPTION = "Отображаемое название правила корреляции (не correlation_id)"
 
 
 # ----------------------------------------------------------------------
@@ -147,6 +149,12 @@ class CorrelationRuleTestRuleSchema(CorrelationRuleBaseSchema):
 # Тело запроса на создание/изменение — CorrelationRuleCreate/Update из API движка
 # ----------------------------------------------------------------------
 class CorrelationRuleRequestCreateUpdateSchema(CorrelationRuleTestRuleSchema):
+    name: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description=NAME_DESCRIPTION,
+        examples=["SSH brute force и успешный вход"],
+    )
     mitre_ids: List[str] = Field(
         default_factory=list,
         description=MITRE_IDS_DESCRIPTION,
@@ -167,6 +175,7 @@ class CorrelationRuleCreateSchema(CorrelationRuleRequestCreateUpdateSchema):
 class CorrelationRuleDBSchema(CorrelationRuleBaseSchema):
     id: int
     correlation_id: str | None = None
+    name: Optional[str] = Field(default=None, description=NAME_DESCRIPTION)
     mitre_ids: List[str] = Field(default_factory=list, description=MITRE_IDS_DESCRIPTION)
     created_by: str
     updated_by: str
@@ -192,6 +201,7 @@ class CorrelationRuleDBSchema(CorrelationRuleBaseSchema):
 class CorrelationRuleESSchema(CorrelationRuleBaseSchema):
     """Правило корреляции в том виде, в каком его отдаёт внешний API"""
     correlation_id: str = Field(description="Идентификатор правила корреляции", examples=["CORR-0031399A"])
+    name: Optional[str] = Field(default=None, description=NAME_DESCRIPTION)
     mitre_ids: List[str] = Field(default_factory=list, description=MITRE_IDS_DESCRIPTION, examples=[["T1110"]])
 
     @field_validator("mitre_ids", mode="before")

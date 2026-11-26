@@ -19,6 +19,11 @@ class CorrelationRuleModel(Base):
         comment="Уникальный идентификатор правила",
     )
     correlation_id: Mapped[str | None]
+    name: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment="Отображаемое название правила",
+    )
     enabled: Mapped[bool] = mapped_column(
         Boolean,
         default=True,

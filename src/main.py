@@ -20,6 +20,8 @@ from src.normalization_profiles.api import router as normalization_router
 from src.data_quality.api import router as data_quality_router
 from src.assets.api import router as assets_router
 from src.engine_settings.api import router as engine_settings_router
+from src.rule_folders.api import router as rule_folders_router
+from src.correlation_folders.api import router as correlation_folders_router
 from fastapi.middleware.cors import CORSMiddleware
 from src.exceptions.exception_handler import setup_exceptions
 
@@ -63,5 +65,7 @@ app.include_router(normalization_router, prefix="/api")
 app.include_router(data_quality_router, prefix="/api")
 app.include_router(assets_router, prefix="/api")
 app.include_router(engine_settings_router, prefix="/api")
+app.include_router(rule_folders_router, prefix="/api")
+app.include_router(correlation_folders_router, prefix="/api")
 
 setup_exceptions(app)

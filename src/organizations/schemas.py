@@ -7,16 +7,16 @@ class OrganizationCreateUpdateSchema(BaseModel):
     aliases: list[str] = Field(default_factory=list)
     agent_ids: list[str] = Field(default_factory=list)
     hostnames: list[str] = Field(default_factory=list)
-    enabled: bool = Field(default=False)
+    enabled: bool = Field(default=True)
 
 
 class Organization(BaseModel):
     organization_id: str = Field(..., description="Уникальный идентификатор организации")
     name: str = Field(..., description="Наименование организации")
-    aliases: List[str] = Field(default_factory=[], description="Альтернативные названия/псевдонимы")
-    agent_names: List[str] = Field(default_factory=[], description="Имена агентов")
-    agent_ids: List[str] = Field(default_factory=[], description="Идентификаторы агентов")
-    hostnames: List[str] = Field(default_factory=[], description="Имена хостов")
+    aliases: List[str] = Field(default_factory=list, description="Альтернативные названия/псевдонимы")
+    agent_names: List[str] = Field(default_factory=list, description="Имена агентов")
+    agent_ids: List[str] = Field(default_factory=list, description="Идентификаторы агентов")
+    hostnames: List[str] = Field(default_factory=list, description="Имена хостов")
     enabled: bool = Field(default=True, description="Статус активности организации")
 
 
@@ -26,7 +26,7 @@ class OrganizationCreateApiResponseSchema(BaseModel):
 
 
 class OrganizationListApiResponse(BaseModel):
-    items: List[Organization] = Field(default_factory=[], description="Список организаций")
+    items: List[Organization] = Field(default_factory=list, description="Список организаций")
 
 
 class AgentsSchema(BaseModel):

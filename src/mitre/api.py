@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from src.dependencies import DBDep
+from src.mitre.schemas import MitreTacticsResponseSchema
 from src.services.mitre_service import MitreService
 
 
@@ -11,6 +12,14 @@ async def get_technique(
         db: DBDep
 ):
     return await MitreService(db).get_technique()
+
+
+@router.get("/tactics", response_model=MitreTacticsResponseSchema, summary="Справочник тактик MITRE ATT&CK")
+async def get_tactics(
+        db: DBDep
+):
+    """Прокси /reference/mitre-tactics движка; `value` передаётся в `mitre_tactic` папки корреляции."""
+    return await MitreService(db).get_tactics()
 
 
 @router.post("/sync-mitre")

@@ -122,7 +122,7 @@ class SecurityScenario(BaseModel):
 
 class ScenarioApiResponse(BaseModel):
     items: list[SecurityScenario] = Field(
-        default_factory=[]
+        default_factory=list
     )
 
     total: int = Field(ge=0)
@@ -144,49 +144,49 @@ class ScenarioDetailSchema(BaseModel):
 
     # Сетевые и субъектные атрибуты
     source_ip: Optional[str] = None
-    source_ips: list[str] = Field(default_factory=[])
+    source_ips: list[str] = Field(default_factory=list)
     source_user: Optional[str] = None
-    source_users: list[str] = Field(default_factory=[])
-    source_hosts: list[str] = Field(default_factory=[])
+    source_users: list[str] = Field(default_factory=list)
+    source_hosts: list[str] = Field(default_factory=list)
     observer_host: Optional[str] = None
     destination_ip: Optional[str] = None
-    destination_ips: list[str] = Field(default_factory=[])
+    destination_ips: list[str] = Field(default_factory=list)
     destination_host: Optional[str] = None
-    destination_hosts: list[str] = Field(default_factory=[])
+    destination_hosts: list[str] = Field(default_factory=list)
 
     # Данные об активе (Asset)
     asset_id: Optional[str] = None
     asset_hostname: Optional[str] = None
     asset_type: Optional[str] = None
     asset_criticality: Optional[str] = None
-    asset_tags: list[str] = Field(default_factory=[])
+    asset_tags: list[str] = Field(default_factory=list)
 
     # Запросы и полезная нагрузка
-    request_uris: list[str] = Field(default_factory=[])
-    payloads: list[str] = Field(default_factory=[])
-    signatures: list[str] = Field(default_factory=[])
+    request_uris: list[str] = Field(default_factory=list)
+    payloads: list[str] = Field(default_factory=list)
+    signatures: list[str] = Field(default_factory=list)
 
     # Хэши файлов
-    file_hashes: list[str] = Field(default_factory=[])
-    md5_hashes: list[str] = Field(default_factory=[])
-    sha1_hashes: list[str] = Field(default_factory=[])
-    sha256_hashes: list[str] = Field(default_factory=[])
+    file_hashes: list[str] = Field(default_factory=list)
+    md5_hashes: list[str] = Field(default_factory=list)
+    sha1_hashes: list[str] = Field(default_factory=list)
+    sha256_hashes: list[str] = Field(default_factory=list)
 
     # Детекты и правила
-    detection_rule_ids: list[str] = Field(default_factory=[])
-    detection_categories: list[str] = Field(default_factory=[])
-    detection_rule_descriptions: list[str] = Field(default_factory=[])
-    recommendations: list[str] = Field(default_factory=[])
+    detection_rule_ids: list[str] = Field(default_factory=list)
+    detection_categories: list[str] = Field(default_factory=list)
+    detection_rule_descriptions: list[str] = Field(default_factory=list)
+    recommendations: list[str] = Field(default_factory=list)
 
     # Индикаторы компрометации (IoC)
-    ioc_matches: list[IocItemSchema] = Field(default_factory=[])
+    ioc_matches: list[IocItemSchema] = Field(default_factory=list)
     ioc_match_count: int
     ioc_severity: Optional[str] = None
     ioc_confidence: Optional[int] = None
 
     # Блеклисты
     blacklisted: bool
-    blacklist_sources: list[str] = Field(default_factory=[])
+    blacklist_sources: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -196,7 +196,7 @@ class ScenarioDetailSchema(BaseModel):
 
 class LinksSchema(BaseModel):
     raw_events: Optional[str] = Field(default=None, description="Ссылка на сырые события")
-    incidents: list[str] = Field(default_factory=[], description="Ссылки на инциденты")
+    incidents: list[str] = Field(default_factory=list, description="Ссылки на инциденты")
 
 
 class ScenarioAggregateSchema(BaseModel):
@@ -206,17 +206,17 @@ class ScenarioAggregateSchema(BaseModel):
 
     incident_count: int = Field(description="Количество инцидентов")
     related_incidents: list[IncidentLiteSchema] = Field(
-        default_factory=[],
+        default_factory=list,
         description="Связанные инциденты"
     )
     related_incident_count: int = Field(description="Количество связанных инцидентов")
     raw_event_count: int = Field(description="Количество сырых событий")
 
     ioc_match_count: int = Field(description="Количество совпадений IoC")
-    ioc_matches: list[Any] = Field(default_factory=[], description="Совпадения IoC")
+    ioc_matches: list[Any] = Field(default_factory=list, description="Совпадения IoC")
 
     # Пустышка для структуры MITRE (принимает любой словарь/объект)
-    mitre: MitreSchema = Field(default_factory={}, description="Данные MITRE ATT&CK")
+    mitre: MitreSchema = Field(default_factory=dict, description="Данные MITRE ATT&CK")
 
     # Вложенный объект ссылок (поддержка "links.raw_events" и "links.incidents")
     links: Optional[LinksSchema] = Field(default=None, description="Ссылки на связанную информацию")

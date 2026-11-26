@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MitreTechniqueResponseSchema(BaseModel):
@@ -43,3 +43,20 @@ class MitreSchema(BaseModel):
     ids: list[str]
     tactics: list[str]
     techniques: list[str]
+
+
+class MitreTacticSchema(BaseModel):
+    """Тактика MITRE ATT&CK (справочник /reference/mitre-tactics движка)"""
+    value: str = Field(..., description="Значение для mitre_tactic папки корреляции")
+    label: str = Field(..., description="Отображаемое название")
+    technique_count: int = Field(0, description="Число техник тактики в индексе soc-mitre-mapping")
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "value": "execution", "label": "Execution — Выполнение", "technique_count": 91,
+    }]})
+
+
+class MitreTacticsResponseSchema(BaseModel):
+    """Ответ GET /reference/mitre-tactics"""
+    items: list[MitreTacticSchema]
+    count: int

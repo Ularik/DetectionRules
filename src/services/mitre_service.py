@@ -1,5 +1,5 @@
 from src.services.base import BaseService
-from src.mitre.schemas import MitreTechniqueResponseSchema, MitreSyncResponseSchema
+from src.mitre.schemas import MitreTechniqueResponseSchema, MitreSyncResponseSchema, MitreTacticsResponseSchema
 
 
 class MitreService(BaseService):
@@ -11,6 +11,10 @@ class MitreService(BaseService):
     async def get_technique_detail(self, mitre_id: str) -> MitreTechniqueResponseSchema:
         res = await self.main_backend.get(f"/mitre-mapping/{mitre_id}")
         return MitreTechniqueResponseSchema.model_validate(res)
+
+    async def get_tactics(self) -> MitreTacticsResponseSchema:
+        res = await self.main_backend.get("/reference/mitre-tactics")
+        return MitreTacticsResponseSchema.model_validate(res)
 
     async def sync_directory(self):
         res = await self.main_backend.post("/mitre-mapping/sync", timeout=60)
