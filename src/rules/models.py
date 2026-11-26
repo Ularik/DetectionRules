@@ -19,6 +19,27 @@ severity_hint_enum_type = SAEnum(
     validate_strings=True,
 )
 
+
+class RuleSeverityHintEnum(str, Enum):
+    """severity_hint правил обнаружения: как SeverityHintEnum, плюс auto — критичность определяет движок.
+
+    Отдельный enum, чтобы auto не попало в правила корреляции и категории (там движок его не принимает).
+    """
+    AUTO = "auto"
+    INFO = "info"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+rule_severity_hint_enum_type = SAEnum(
+    RuleSeverityHintEnum,
+    name="rule_severity_hint_enum",
+    values_callable=lambda enum_type: [member.value for member in enum_type],
+    validate_strings=True,
+)
+
 class DetectionRuleModel(Base):
     __tablename__ = "detection_rules"
 
@@ -49,8 +70,8 @@ class DetectionRuleModel(Base):
         nullable=True,
         default=list
     )     # Initial Access
-    severity_hint: Mapped[SeverityHintEnum] = mapped_column(
-        severity_hint_enum_type,
+    severity_hint: Mapped[RuleSeverityHintEnum] = mapped_column(
+        rule_severity_hint_enum_type,
         nullable=False
     )
     confidence: Mapped[int | None] = mapped_column(

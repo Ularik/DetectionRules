@@ -12,6 +12,10 @@ from src.correlation_rules.schemas import (
     SequenceItemSchema,
     GroupByResponseSchema,
     ScenarioTypesResponseSchema,
+    ScenarioTypeCreateSchema,
+    ScenarioTypeCreateResponseSchema,
+    ScenarioTypeUpdateSchema,
+    ScenarioTypeDeleteResponseSchema,
 )
 from src.exceptions.schemas import error_responses
 
@@ -61,6 +65,41 @@ async def get_scenario_types(
         db: DBDep
 ):
     return await ReferenceService(db).get_scenario_types()
+
+
+@router.post("/scenario-types", response_model=ScenarioTypeCreateResponseSchema, status_code=201,
+             responses=error_responses(400, 401, 403),
+             summary="Добавить тип сценария в справочник scenario_type")
+async def post_scenario_type(
+        db: DBDep,
+        user: EditorUserDep,
+        data: ScenarioTypeCreateSchema
+):
+    """Прокси POST /reference/scenario-types движка; новое значение появится в GET /scenario-types."""
+    return await ReferenceService(db).create_scenario_type(data=data)
+
+
+@router.put("/scenario-types/{value}", response_model=ScenarioTypeCreateResponseSchema,
+            responses=error_responses(401, 403, 404), summary="Изменить тип сценария")
+async def put_scenario_type(
+        db: DBDep,
+        user: EditorUserDep,
+        value: str,
+        data: ScenarioTypeUpdateSchema
+):
+    """Меняются только `label` и `description`; системные типы изменить нельзя (403)."""
+    return await ReferenceService(db).update_scenario_type(value=value, data=data)
+
+
+@router.delete("/scenario-types/{value}", response_model=ScenarioTypeDeleteResponseSchema,
+               responses=error_responses(401, 403), summary="Удалить тип сценария")
+async def delete_scenario_type(
+        db: DBDep,
+        user: EditorUserDep,
+        value: str
+):
+    """Удалить можно только добавленный вручную тип; на системный или несуществующий движок отвечает 403."""
+    return await ReferenceService(db).delete_scenario_type(value=value)
 
 
 @router.post("/", response_model=CorrelationRuleESSchema, status_code=201,

@@ -1,7 +1,7 @@
 from typing import Literal, Optional, Any
 
 from pydantic import BaseModel, ConfigDict, Field
-from src.rules.models import SeverityHintEnum
+from src.rules.models import RuleSeverityHintEnum, SeverityHintEnum
 from datetime import datetime
 
 
@@ -31,7 +31,10 @@ class RuleBaseSchema(BaseModel):
     scenario_type: str | None = None
     mitre_ids: list[str] = Field(default_factory=list)
     tactics: list[str] = Field(default_factory=list)
-    severity_hint: SeverityHintEnum = SeverityHintEnum.MEDIUM
+    severity_hint: RuleSeverityHintEnum = Field(
+        RuleSeverityHintEnum.AUTO,
+        description="Критичность: auto (по умолчанию — определяет движок), info, low, medium, high, critical",
+    )
     confidence: int | None = Field(70, ge=0, le=100)
     description: str | None = None
     explanation_template: str | None = None
@@ -249,3 +252,19 @@ class TestRuleResponseSchema(BaseModel):
     model_config = ConfigDict(json_schema_extra={
         "examples": [{"matched": True, "rule_id": "web_sqli_union_select"}]
     })
+
+
+class DetectionCategoryCreateSchema(BaseModel):
+    """Тело POST /detection-categories (DetectionCategoryCreate движка)"""
+    category: str = Field(..., min_length=1, description="Код категории, например path_traversal")
+    scope: str = Field(..., min_length=1, description="Область применения — из GET /api/rules/enums/detection-scopes")
+    name: str = Field(..., min_length=1, description="Отображаемое название")
+    description: str = Field("", description="Описание категории")
+    default_attack_type: str = Field(..., min_length=1, description="attack_type по умолчанию — из GET /api/attack-types/")
+    default_scenario_type: Optional[str] = Field(
+        None, description="scenario_type по умолчанию — из GET /api/correlation-rules/scenario-types"
+    )
+    default_severity: SeverityHintEnum = Field(SeverityHintEnum.MEDIUM, description="Критичность по умолчанию")
+    default_mitre_ids: list[str] = Field(default_factory=list, description="Техники MITRE — из GET /api/mitre/mitre")
+    default_tactics: list[str] = Field(default_factory=list, description="Тактики MITRE")
+    enabled: bool = True

@@ -3,10 +3,24 @@ from datetime import datetime
 
 
 class AttackSchema(BaseModel):
-    label: str
-    value: str
+    """Элемент справочника /reference/attack-types"""
+    value: str = Field(..., description="Значение attack_type")
+    label: str = Field(..., description="Отображаемое название")
+    description: str = Field("", description="Описание типа атаки")
+    source: str | None = Field(
+        None, description="Происхождение: system — встроенный (изменять и удалять нельзя), custom — добавлен вручную"
+    )
+    scopes: list[str] = Field(default_factory=list, description="Области применения (web, linux, ...)")
+    rule_count: int = Field(0, ge=0, description="Сколько правил обнаружения используют этот тип атаки")
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "value": "web_exploit_attempt", "label": "web_exploit_attempt",
+        "description": "Попытка эксплуатации веб-уязвимости", "source": "system", "scopes": ["web"], "rule_count": 9,
+    }]})
+
 
 class AttackApiResponseSchema(BaseModel):
+    """Ответ GET /reference/attack-types"""
     items: list[AttackSchema]
     count: int
 
@@ -108,3 +122,30 @@ class AttackGroupsResponseSchema(BaseModel):
     incidents: list[HuntingIpIncidentSchema] = Field(default_factory=list)
     page: int
     size: int
+
+
+# Запись в справочник /reference/attack-types
+
+class AttackTypeCreateSchema(BaseModel):
+    """Тело POST /reference/attack-types (AttackTypeCreate движка)"""
+    value: str = Field(..., min_length=1, description="Значение attack_type, например ssh_bruteforce")
+    label: str = Field(..., min_length=1, description="Отображаемое название")
+    description: str = Field("", description="Описание типа атаки")
+
+
+class AttackTypeUpdateSchema(BaseModel):
+    """Тело PUT /reference/attack-types/{value} (AttackTypeUpdate движка)"""
+    label: str = Field(..., min_length=1, description="Отображаемое название")
+    description: str = Field("", description="Описание типа атаки")
+
+
+class AttackTypeResponseSchema(BaseModel):
+    """Ответ POST/PUT /reference/attack-types движка"""
+    success: bool
+    attack_type: AttackTypeCreateSchema
+
+
+class AttackTypeDeleteResponseSchema(BaseModel):
+    """Ответ DELETE /reference/attack-types/{value} движка"""
+    success: bool
+    deleted: str

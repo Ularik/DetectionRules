@@ -317,3 +317,32 @@ class ScenarioTypesResponseSchema(BaseModel):
             "count": 2,
         }]
     })
+
+
+class ScenarioTypeCreateSchema(BaseModel):
+    """Тело POST /reference/scenario-types (ScenarioTypeCreate движка)"""
+    value: str = Field(..., min_length=1, description="Значение scenario_type, например credential_access_only")
+    label: str = Field(..., min_length=1, description="Отображаемое название")
+    description: str = Field("", description="Описание типа сценария")
+
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [{"value": "credential_access_only", "label": "Credential Access", "description": ""}]
+    })
+
+
+class ScenarioTypeCreateResponseSchema(BaseModel):
+    """Ответ POST /reference/scenario-types движка"""
+    success: bool
+    scenario_type: ScenarioTypeCreateSchema = Field(..., description="Добавленный тип сценария")
+
+
+class ScenarioTypeUpdateSchema(BaseModel):
+    """Тело PUT /reference/scenario-types/{value} (ScenarioTypeUpdate движка); value меняется только через новое значение"""
+    label: str = Field(..., min_length=1, description="Отображаемое название")
+    description: str = Field("", description="Описание типа сценария")
+
+
+class ScenarioTypeDeleteResponseSchema(BaseModel):
+    """Ответ DELETE /reference/scenario-types/{value} движка"""
+    success: bool
+    deleted: str = Field(..., description="Удалённое значение scenario_type")

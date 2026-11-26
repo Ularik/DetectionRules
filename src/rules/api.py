@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
-from src.rules.models import SeverityHintEnum
-from src.rules.schemas import RuleApiResponseSchema, RuleESSchema
+from src.rules.models import RuleSeverityHintEnum
+from src.rules.schemas import DetectionCategoryCreateSchema, RuleApiResponseSchema, RuleESSchema
+from src.services.reference_service import ReferenceService
 from src.services.rules_services import RuleService
 from src.dependencies import DBDep, PaginationDep, get_admin_user, get_editor_user, get_current_user
 from src.exceptions.schemas import error_responses
@@ -47,13 +48,22 @@ async def get_rules(
 @router.get("/enums/severity-hints", tags=["Правила"], dependencies=[Depends(get_current_user)],
             response_model=list[str], responses=error_responses(401))
 async def get_severity_hints():
-    return [e.value for e in SeverityHintEnum]
+    """Значения поля severity_hint формы правила; первое (auto) — значение по умолчанию."""
+    return [e.value for e in RuleSeverityHintEnum]
 
 
 @router.get("/enums/detection-categories", tags=["Правила"], dependencies=[Depends(get_current_user)],
             responses=error_responses(401, 502))
 async def get_detection_categories(db: DBDep):
     return await RuleService(db).get_detection_categories()
+
+
+@router.post("/enums/detection-categories", tags=["Правила"], dependencies=[Depends(get_editor_user)],
+             status_code=201, responses=error_responses(400, 401, 403, 502),
+             summary="Добавить категорию обнаружения")
+async def post_detection_category(db: DBDep, data: DetectionCategoryCreateSchema):
+    """Прокси POST /detection-categories движка; ответ отдаётся как есть (схема в OpenAPI движка пустая)."""
+    return await ReferenceService(db).create_detection_category(data=data)
 
 
 @router.get("/enums/detection-scopes", tags=["Правила"], dependencies=[Depends(get_current_user)],

@@ -10,8 +10,10 @@ from src.events.schema import WazuhEventSchema
 
 
 class ScenariosEventsApiResponseSchema(BaseModel):
-    organization_id: str
-    scenario_type: str
+    scenario_id: Optional[str] = None
+    # У сценариев без привязки к организации движок возвращает null
+    organization_id: Optional[str] = None
+    scenario_type: Optional[str] = None
     incident_ids: list[str]
     items: list[WazuhEventSchema]
     total: int
@@ -30,8 +32,8 @@ class SeverityEnum(str, Enum):
 
 
 class ScenarioEventsParams(BaseModel):
-    page: int = Field(default=1)
-    size: int = Field(default=10)
+    page: int = Field(default=1, ge=1, description="Номер страницы (начиная с 1)")
+    size: int = Field(default=10, ge=1, le=200, description="Количество событий на странице (1–200)")
 
 
 class ScenarioQueryParams(BaseModel):
