@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class OrganizationCreateUpdateSchema(BaseModel):
     name: str
-    aliases: list[str] = Field(default=list)
-    agent_ids: list[str] = Field(default=list)
-    hostnames: list[str] = Field(default=list)
+    aliases: list[str] = Field(default_factory=list)
+    agent_ids: list[str] = Field(default_factory=list)
+    hostnames: list[str] = Field(default_factory=list)
     enabled: bool = Field(default=False)
 
 

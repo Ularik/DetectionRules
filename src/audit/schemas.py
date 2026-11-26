@@ -149,3 +149,34 @@ class CorrelationAuditOutFullSchema(CorrelationAuditOutWithAuthorSchema):
             {"field": "mitre_ids", "old": [], "new": ["T1068"]},
         ],
     }]})
+
+# ---------- журнал аудита внешнего API (GET /audit) ----------
+
+class EngineAuditQuerySchema(BaseModel):
+    size: int = Field(default=100, ge=1, description="Количество записей")
+    resource_type: str | None = Field(
+        default=None,
+        description="Тип ресурса: detection_rule, correlation_rule, suppression_rule, threat_intel_ioc, "
+                    "organization, source, asset, mitre_mapping, engine_settings и др.",
+    )
+    action: str | None = Field(
+        default=None,
+        description="Действие: create, update, delete, enable, disable, publish, mark_viewed, sync и др.",
+    )
+    resource_id: str | None = Field(default=None, description="Идентификатор ресурса (rule_id, correlation_id и т.д.)")
+    organization_id: str | None = Field(default=None, description="Идентификатор организации")
+
+
+class EngineAuditSchema(BaseModel):
+    """Запись журнала аудита внешнего API: снимки ресурса до и после действия."""
+    audit_id: str = Field(..., description="Идентификатор записи аудита")
+    timestamp: datetime = Field(..., description="Время действия")
+    actor: str | None = Field(None, description="Пользователь, выполнивший действие")
+    role: str | None = Field(None, description="Роль пользователя")
+    action: str = Field(..., description="Действие")
+    resource_type: str = Field(..., description="Тип ресурса")
+    resource_id: str | None = Field(None, description="Идентификатор ресурса")
+    organization_id: str | None = Field(None, description="Идентификатор организации")
+    before: dict[str, Any] | None = Field(None, description="Состояние ресурса до действия")
+    after: dict[str, Any] | None = Field(None, description="Состояние ресурса после действия")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Дополнительные данные")

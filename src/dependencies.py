@@ -58,6 +58,9 @@ async def get_admin_user(user_data: UserInCookiesSchema = Depends(get_current_us
         )
     return user_data
 
+AdminUserDep = Annotated[UserInCookiesSchema, Depends(get_admin_user)]
+
+
 async def get_analyst_user(user_data: UserInCookiesSchema = Depends(get_current_user)) -> UserInCookiesSchema:
     if user_data.role != "ANALYST":
         raise HTTPException(

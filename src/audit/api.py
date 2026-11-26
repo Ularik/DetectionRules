@@ -3,8 +3,9 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query
 from src.dependencies import DBDep, PaginationDep, get_current_user
 from src.exceptions.schemas import error_responses
-from src.audit.schemas import ApiCorrelationAuditWithAuthorSchema, CorrelationAuditOutFullSchema
-from src.services.audit_services import AuditService, CorrelationAuditService
+from src.audit.schemas import ApiCorrelationAuditWithAuthorSchema, CorrelationAuditOutFullSchema, \
+    EngineAuditQuerySchema, EngineAuditSchema
+from src.services.audit_services import AuditService, CorrelationAuditService, EngineAuditService
 
 router = APIRouter(prefix="/audits", tags=["Истороия изменений"])
 
@@ -12,6 +13,24 @@ router = APIRouter(prefix="/audits", tags=["Истороия изменений"
 CorrelationAuditAction = Literal["created", "updated", "status_changed", "deleted"]
 # действия, которые пишет RuleService
 RuleAuditAction = Literal["created", "updated"]
+
+
+# ---------- журнал аудита внешнего API (до /{id}) ----------
+
+@router.get(
+    "/engine",
+    dependencies=[Depends(get_current_user)],
+    response_model=list[EngineAuditSchema],
+    responses=error_responses(401),
+    summary="Журнал аудита движка",
+    description="Прокси `GET /audit` внешнего API: действия над всеми ресурсами "
+                "(правила, IOC, организации, источники, активы и т.д.) со снимками до и после.",
+)
+async def get_engine_audits(
+        db: DBDep,
+        params: EngineAuditQuerySchema = Depends(),
+):
+    return await EngineAuditService(db).get_audits(params)
 
 
 # ---------- история правил корреляции (до /{id}, иначе путь перехватит /{id}) ----------

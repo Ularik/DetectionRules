@@ -1,6 +1,6 @@
 from src.services.base import BaseService
 from src.audit.schemas import AuditOutFullSchema, ApiAuditWithAuthorSchema, \
-    ApiCorrelationAuditWithAuthorSchema, CorrelationAuditOutFullSchema
+    ApiCorrelationAuditWithAuthorSchema, CorrelationAuditOutFullSchema, EngineAuditQuerySchema, EngineAuditSchema
 
 
 class AuditService(BaseService):
@@ -39,3 +39,11 @@ class CorrelationAuditService(BaseService):
 
     async def get_detail_audit(self, audit_id: int) -> CorrelationAuditOutFullSchema:
         return await self.db.correlationAuditModel.get_detail_audit(audit_id=audit_id)
+
+
+class EngineAuditService(BaseService):
+    """Журнал аудита внешнего API (все типы ресурсов, снимки before/after)."""
+
+    async def get_audits(self, params: EngineAuditQuerySchema) -> list[EngineAuditSchema]:
+        res = await self.main_backend.get("/audit", params=params)
+        return [EngineAuditSchema.model_validate(item) for item in res or []]
